@@ -105,7 +105,14 @@ def write_atomic(path: Path, text: str) -> None:
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(text)
-        os.replace(tmp, path)
+        for attempt in range(10):             # Windows/OneDrive sperren die Zieldatei kurz (WinError 5)
+            try:
+                os.replace(tmp, path)
+                break
+            except PermissionError:
+                if attempt == 9:
+                    raise
+                time.sleep(0.2 * (attempt + 1))
     except BaseException:
         Path(tmp).unlink(missing_ok=True)
         raise

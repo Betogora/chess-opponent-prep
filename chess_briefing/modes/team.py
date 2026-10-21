@@ -56,11 +56,15 @@ def run(sources: list[str], stage: str, color: str | None = None, board1: str | 
         from . import medium, scout
         for p in todo:
             ts = time.monotonic()
-            if stage == "scout":
-                r = scout.run_result(str(p["fide_id"] or L.player_input(p)), p["color"], budget or 90, fide_id=p["fide_id"])
-            else:
-                r = medium.run_result(str(p["fide_id"] or L.player_input(p)), p["color"], n_games, budget or 300,
-                                      fide_id=p["fide_id"])
+            try:                              # ein Spieler mit Fehler hält die Mannschaft nicht auf
+                if stage == "scout":
+                    r = scout.run_result(str(p["fide_id"] or L.player_input(p)), p["color"], budget or 90, fide_id=p["fide_id"])
+                else:
+                    r = medium.run_result(str(p["fide_id"] or L.player_input(p)), p["color"], n_games, budget or 300,
+                                          fide_id=p["fide_id"])
+            except Exception as e:
+                log(f"   ! {p.get('display') or p['name']}: {type(e).__name__}: {e}")
+                r = {"rc": 1, "note": f"Fehler: {type(e).__name__}"}
             p.update(seconds=round(time.monotonic() - ts, 1), rc=r["rc"], timing=r.get("timing"), games=r.get("games"),
                      analysed=r.get("analysed"), note=r.get("note") or p.get("note", ""))
     for p in todo:
