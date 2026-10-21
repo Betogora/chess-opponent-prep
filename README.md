@@ -90,4 +90,6 @@ Datenquellen und Grenzen: [data-sources.md](skills/chess-opponent-research-deep/
 
 Apache-2.0 ([LICENSE](LICENSE)). Aufbauend auf Struktur und Kennzahlen von chessimprovement/opponent-prep, neu
 implementiert. Stockfish (GPL) lädt `setup` vom offiziellen Release; Figuren von Colin M. L. Burnett (GPL/CC BY-SA)
-über python-chess; Eröffnungsnamen von lichess-org/chess-openings (CC0).
+über python-chess; Eröffnungsnamen von lichess-org/chess-openings (CC0). Die README-Grafiken betten Teile der Schrift
+[Manrope](https://github.com/sharanda/manrope) ein (© 2019 The Manrope Project Authors,
+[SIL Open Font License 1.1](https://openfontlicense.org)); erzeugt mit `docs/assets/make_readme_art.py`.
