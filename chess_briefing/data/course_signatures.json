@@ -1,0 +1,71 @@
+{
+ "_doc": "Kurs-Signaturen fuer den Repertoire-Abgleich. family_line = Grundstellung in SAN (stellungsbasiert verglichen). decisions = trennscharfe Kursstellen {path, move, note}; NUR mit belegter Quelle eintragen (eigener Kurszugang, Kursbeschreibung, Vorschaukapitel). Pflege: python briefing.py course-add.",
+ "courses": [
+  {
+   "id": 22327,
+   "name": "Mayhem In The Morra",
+   "author": "Marc Esserman",
+   "color": "white",
+   "published": "2019-05-13",
+   "url": "https://www.chessable.com/mayhem-in-the-morra/course/22327/",
+   "family_line": "e4 c5 d4 cxd4 c3",
+   "decisions": [],
+   "source": "Chessable-Suche (Metadaten); Grundlinie aus Kursname/-beschreibung"
+  },
+  {
+   "id": 80595,
+   "name": "The Swashbuckling Smith-Morra Gambit",
+   "author": "Tanmay Srinath",
+   "color": "white",
+   "published": "2022-04-02",
+   "url": "https://www.chessable.com/the-swashbuckling-smith-morra-gambit/course/80595/",
+   "family_line": "e4 c5 d4 cxd4 c3",
+   "decisions": [],
+   "source": "Chessable-Suche (Metadaten); Grundlinie aus Kursname/-beschreibung"
+  },
+  {
+   "id": 56567,
+   "name": "Lifetime Repertoires: Giri's Najdorf Sicilian",
+   "author": "Anish Giri",
+   "color": "black",
+   "published": "2020-12-21",
+   "url": "https://www.chessable.com/lifetime-repertoires-giris-najdorf-sicilian/course/56567/",
+   "family_line": "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6",
+   "decisions": [],
+   "source": "Chessable-Suche (Metadaten); Grundlinie aus Kursname/-beschreibung"
+  },
+  {
+   "id": 20483,
+   "name": "Najdorf Sicilian: Simplified",
+   "author": "Alex Colovic",
+   "color": "black",
+   "published": "2019-03-04",
+   "url": "https://www.chessable.com/najdorf-sicilian-simplified/course/20483/",
+   "family_line": "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6",
+   "decisions": [],
+   "source": "Chessable-Suche (Metadaten); Grundlinie aus Kursname/-beschreibung"
+  },
+  {
+   "id": 92259,
+   "name": "King's Indian: Simplified",
+   "author": "Alex Colovic",
+   "color": "black",
+   "published": "2021-12-02",
+   "url": "https://www.chessable.com/kings-indian-simplified/course/92259/",
+   "family_line": "d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O",
+   "decisions": [],
+   "source": "Chessable-Suche (Metadaten); Grundlinie aus Kursname/-beschreibung"
+  },
+  {
+   "id": 416495,
+   "name": "Keep It Sharp: King's Indian",
+   "author": "Christof Sielecki",
+   "color": "black",
+   "published": "2026-09-28",
+   "url": "https://www.chessable.com/keep-it-sharp-kings-indian/course/416495/",
+   "family_line": "d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O",
+   "decisions": [],
+   "source": "Chessable-Suche (Metadaten); Grundlinie aus Kursname/-beschreibung"
+  }
+ ]
+}

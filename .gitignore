@@ -1,0 +1,38 @@
+# --- Ergebnisse und private Daten (bleiben lokal) ---------------------------
+# Reports, Dossiers und inbox-PGNs je Gegner und Mannschaft
+output/
+# alter Ergebnisordner (vor 1.0)
+players/
+# HTTP- und Engine-Cache (mehrere hundert MB)
+cache/
+# eigene Sammel-PGNs
+pgn/
+# Eigenprofil und manuelle Account-Entscheidungen
+me.json
+**/me.json
+**/research.json
+# Lichess-Token u. a.
+.env
+.env.*
+!.env.example
+
+# --- Werkzeuge und Pakete --------------------------------------------------
+# Stockfish (python briefing.py setup)
+tools/
+# Weitergabe-Zips (python briefing.py pack)
+dist/
+
+# --- Lokale Entwicklung ----------------------------------------------------
+# Design-Vorlage (BengtsToolBox), nicht Teil des Projekts
+ui-elements.html
+.claude/launch.json
+.claude/settings.local.json
+.claude/worktrees/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.tmp
+.DS_Store
+Thumbs.db

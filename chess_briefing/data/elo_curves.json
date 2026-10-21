@@ -1,0 +1,398 @@
+{
+ "meta": {
+  "created": "2026-10-16",
+  "engine": "Stockfish 19",
+  "depth": 18,
+  "shallow_depth": 14,
+  "alt_depth": 14,
+  "only_move_gap": 0.1,
+  "games": 436,
+  "sides": 872,
+  "tours": [
+   "AX9HniLg",
+   "KMpSSXbq",
+   "TFBYHcwi",
+   "TFbd3AWR",
+   "WMdAT3lX",
+   "hRRItcgc",
+   "iDjs8deZ",
+   "nomgoo1N",
+   "rorzsWPX",
+   "tvsWCkvT",
+   "xKjLb43R"
+  ],
+  "min_base_sec": 3600
+ },
+ "classes": {
+  "scharf": {
+   "bands": [
+    {
+     "elo": 1500,
+     "n": 249,
+     "x": 69,
+     "rate_per_100": 27.71
+    },
+    {
+     "elo": 1700,
+     "n": 361,
+     "x": 82,
+     "rate_per_100": 22.71
+    },
+    {
+     "elo": 1900,
+     "n": 455,
+     "x": 83,
+     "rate_per_100": 18.24
+    },
+    {
+     "elo": 2100,
+     "n": 583,
+     "x": 106,
+     "rate_per_100": 18.18
+    },
+    {
+     "elo": 2300,
+     "n": 522,
+     "x": 92,
+     "rate_per_100": 17.62
+    },
+    {
+     "elo": 2500,
+     "n": 338,
+     "x": 39,
+     "rate_per_100": 11.54
+    }
+   ],
+   "fit": {
+    "a": -1.6547,
+    "b": -0.0658
+   }
+  },
+  "ruhig": {
+   "bands": [
+    {
+     "elo": 1500,
+     "n": 928,
+     "x": 113,
+     "rate_per_100": 12.18
+    },
+    {
+     "elo": 1700,
+     "n": 1462,
+     "x": 131,
+     "rate_per_100": 8.96
+    },
+    {
+     "elo": 1900,
+     "n": 1851,
+     "x": 140,
+     "rate_per_100": 7.56
+    },
+    {
+     "elo": 2100,
+     "n": 2001,
+     "x": 133,
+     "rate_per_100": 6.65
+    },
+    {
+     "elo": 2300,
+     "n": 1829,
+     "x": 89,
+     "rate_per_100": 4.87
+    },
+    {
+     "elo": 2500,
+     "n": 1412,
+     "x": 55,
+     "rate_per_100": 3.9
+    }
+   ],
+   "fit": {
+    "a": -2.6715,
+    "b": -0.1071
+   }
+  },
+  "endspiel": {
+   "bands": [
+    {
+     "elo": 1500,
+     "n": 627,
+     "x": 67,
+     "rate_per_100": 10.69
+    },
+    {
+     "elo": 1700,
+     "n": 729,
+     "x": 83,
+     "rate_per_100": 11.39
+    },
+    {
+     "elo": 1900,
+     "n": 874,
+     "x": 60,
+     "rate_per_100": 6.86
+    },
+    {
+     "elo": 2100,
+     "n": 963,
+     "x": 71,
+     "rate_per_100": 7.37
+    },
+    {
+     "elo": 2300,
+     "n": 1287,
+     "x": 44,
+     "rate_per_100": 3.42
+    },
+    {
+     "elo": 2500,
+     "n": 820,
+     "x": 25,
+     "rate_per_100": 3.05
+    }
+   ],
+   "fit": {
+    "a": -2.7169,
+    "b": -0.1329
+   }
+  }
+ },
+ "phases": {
+  "Eröffnung": {
+   "bands": [
+    {
+     "elo": 1500,
+     "n": 1077,
+     "x": 60,
+     "rate_per_100": 5.57
+    },
+    {
+     "elo": 1700,
+     "n": 1633,
+     "x": 53,
+     "rate_per_100": 3.25
+    },
+    {
+     "elo": 1900,
+     "n": 1988,
+     "x": 58,
+     "rate_per_100": 2.92
+    },
+    {
+     "elo": 2100,
+     "n": 2123,
+     "x": 56,
+     "rate_per_100": 2.64
+    },
+    {
+     "elo": 2300,
+     "n": 1872,
+     "x": 29,
+     "rate_per_100": 1.55
+    },
+    {
+     "elo": 2500,
+     "n": 1437,
+     "x": 20,
+     "rate_per_100": 1.39
+    }
+   ],
+   "fit": {
+    "a": -3.633,
+    "b": -0.1307
+   }
+  },
+  "Mittelspiel": {
+   "bands": [
+    {
+     "elo": 1500,
+     "n": 784,
+     "x": 135,
+     "rate_per_100": 17.22
+    },
+    {
+     "elo": 1700,
+     "n": 1215,
+     "x": 170,
+     "rate_per_100": 13.99
+    },
+    {
+     "elo": 1900,
+     "n": 1514,
+     "x": 169,
+     "rate_per_100": 11.16
+    },
+    {
+     "elo": 2100,
+     "n": 1725,
+     "x": 192,
+     "rate_per_100": 11.13
+    },
+    {
+     "elo": 2300,
+     "n": 1566,
+     "x": 155,
+     "rate_per_100": 9.9
+    },
+    {
+     "elo": 2500,
+     "n": 1150,
+     "x": 83,
+     "rate_per_100": 7.22
+    }
+   ],
+   "fit": {
+    "a": -2.1661,
+    "b": -0.073
+   }
+  },
+  "Endspiel": {
+   "bands": [
+    {
+     "elo": 1500,
+     "n": 627,
+     "x": 67,
+     "rate_per_100": 10.69
+    },
+    {
+     "elo": 1700,
+     "n": 729,
+     "x": 83,
+     "rate_per_100": 11.39
+    },
+    {
+     "elo": 1900,
+     "n": 874,
+     "x": 60,
+     "rate_per_100": 6.86
+    },
+    {
+     "elo": 2100,
+     "n": 963,
+     "x": 71,
+     "rate_per_100": 7.37
+    },
+    {
+     "elo": 2300,
+     "n": 1287,
+     "x": 44,
+     "rate_per_100": 3.42
+    },
+    {
+     "elo": 2500,
+     "n": 820,
+     "x": 25,
+     "rate_per_100": 3.05
+    }
+   ],
+   "fit": {
+    "a": -2.7169,
+    "b": -0.1329
+   }
+  }
+ },
+ "bands": [
+  {
+   "elo": 1500,
+   "sides": 98,
+   "markers_mean": 1.1837,
+   "markers_sd": 0.7049,
+   "draw_rate": 0.2551,
+   "conversion": 0.3725,
+   "conversion_n": 51,
+   "resilience": 0.3205,
+   "resilience_n": 78,
+   "punish": 0.4798,
+   "punish_n": 198,
+   "clock30_mean": 0.3253,
+   "clock30_sd": 0.2546,
+   "clock_n": 79,
+   "trouble_rate": 0.3061
+  },
+  {
+   "elo": 1700,
+   "sides": 147,
+   "markers_mean": 1.3129,
+   "markers_sd": 0.798,
+   "draw_rate": 0.2653,
+   "conversion": 0.55,
+   "conversion_n": 100,
+   "resilience": 0.3765,
+   "resilience_n": 85,
+   "punish": 0.5238,
+   "punish_n": 315,
+   "clock30_mean": 0.2805,
+   "clock30_sd": 0.2342,
+   "clock_n": 115,
+   "trouble_rate": 0.3605
+  },
+  {
+   "elo": 1900,
+   "sides": 171,
+   "markers_mean": 1.3567,
+   "markers_sd": 0.6977,
+   "draw_rate": 0.2865,
+   "conversion": 0.6061,
+   "conversion_n": 99,
+   "resilience": 0.3939,
+   "resilience_n": 99,
+   "punish": 0.5852,
+   "punish_n": 270,
+   "clock30_mean": 0.2533,
+   "clock30_sd": 0.223,
+   "clock_n": 131,
+   "trouble_rate": 0.3626
+  },
+  {
+   "elo": 2100,
+   "sides": 181,
+   "markers_mean": 1.3702,
+   "markers_sd": 0.744,
+   "draw_rate": 0.3149,
+   "conversion": 0.5059,
+   "conversion_n": 85,
+   "resilience": 0.2059,
+   "resilience_n": 102,
+   "punish": 0.5765,
+   "punish_n": 255,
+   "clock30_mean": 0.2479,
+   "clock30_sd": 0.2047,
+   "clock_n": 140,
+   "trouble_rate": 0.3536
+  },
+  {
+   "elo": 2300,
+   "sides": 155,
+   "markers_mean": 1.2581,
+   "markers_sd": 0.7691,
+   "draw_rate": 0.3871,
+   "conversion": 0.5385,
+   "conversion_n": 91,
+   "resilience": 0.4651,
+   "resilience_n": 86,
+   "punish": 0.6154,
+   "punish_n": 234,
+   "clock30_mean": 0.2035,
+   "clock30_sd": 0.2061,
+   "clock_n": 123,
+   "trouble_rate": 0.4258
+  },
+  {
+   "elo": 2500,
+   "sides": 120,
+   "markers_mean": 1.25,
+   "markers_sd": 0.7444,
+   "draw_rate": 0.3333,
+   "conversion": 0.7812,
+   "conversion_n": 96,
+   "resilience": 0.8148,
+   "resilience_n": 27,
+   "punish": 0.652,
+   "punish_n": 250,
+   "clock30_mean": 0.265,
+   "clock30_sd": 0.1996,
+   "clock_n": 86,
+   "trouble_rate": 0.2417
+  }
+ ]
+}
