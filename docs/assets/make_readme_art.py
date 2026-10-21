@@ -24,7 +24,7 @@ FONT = "M, Manrope, 'Segoe UI', system-ui, -apple-system, sans-serif"
 MONO = "ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace"
 
 THEMES = {
-    "light": dict(fg="#111827", muted="#4b5563", subtle="#6b7280", border="#e5e7eb", strong="#d1d5db", card="#ffffff",
+    "light": dict(fg="#0b1220", muted="#1f2937", subtle="#4b5563", border="#d1d5db", strong="#9ca3af", card="#ffffff",
                   primary="#236492", soft="#ebf3f9", accent="#b55b43", asoft="#f8ece8", sq_l="#f4f7fa", sq_d="#c3d9e8",
                   mark=("#f6e3b4", "#e7cf8f"), arrow="#236492", shadow="rgb(16 24 40 / 10%)"),
     "dark": dict(fg="#f0f6fc", muted="#9198a1", subtle="#7d8590", border="#30363d", strong="#3d444d", card="#161b22",
