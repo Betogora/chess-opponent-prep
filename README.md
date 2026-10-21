@@ -1,14 +1,9 @@
-<p align="center">
-  <img src="docs/assets/banner.svg" alt="chess-opponent-prep – Gegnervorbereitung für Schach" width="100%">
-</p>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/header-dark.svg">
+  <img src="docs/assets/header-light.svg" alt="chess-opponent-prep – Gegnervorbereitung für Schach in vier Skills" width="100%">
+</picture>
 
-<p align="center">
-  <img alt="Version 1.0.0" src="https://img.shields.io/badge/version-1.0.0-236492?style=flat-square">
-  <img alt="Python 3.12+" src="https://img.shields.io/badge/python-3.12%2B-236492?style=flat-square&logo=python&logoColor=white">
-  <img alt="Stockfish" src="https://img.shields.io/badge/engine-Stockfish-b55b43?style=flat-square">
-  <img alt="Offline-HTML" src="https://img.shields.io/badge/report-offline%20HTML-079455?style=flat-square">
-  <img alt="Lizenz Apache-2.0" src="https://img.shields.io/badge/lizenz-Apache--2.0-4b5563?style=flat-square">
-</p>
+<p align="center"><sub>Python 3.12+ · Stockfish · Windows, macOS, Linux · offline · Apache-2.0</sub></p>
 
 Aus FIDE-ID, Name oder ChessBase-Link wird eine **offline lauffähige HTML-Seite** zur Vorbereitung auf einen Gegner –
 oder auf eine ganze Mannschaft. Alles Rechnen macht `briefing.py` (Stockfish, Kennzahlen, Belege); ein KI-Agent
@@ -16,7 +11,10 @@ schreibt höchstens den Matchplan, und jede Zahl darin ist mit einem Beleg verkn
 
 ## Die vier Skills
 
-<p align="center"><img src="docs/assets/skills.svg" alt="scout-fast, briefing-medium, research-deep, team-prep" width="100%"></p>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/skills-dark.svg">
+  <img src="docs/assets/skills-light.svg" alt="scout-fast, briefing-medium, research-deep, team-prep" width="100%">
+</picture>
 
 | Skill | Wann | Dauer* | Ergebnis |
 |---|---|---|---|

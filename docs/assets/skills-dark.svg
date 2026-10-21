@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="330" viewBox="0 0 1200 330" role="img" aria-labelledby="t d"><title id="t">Die vier Skills</title><desc id="d">scout-fast unter 1 Minute ohne Engine; briefing-medium 2 bis 5 Minuten mit Engine für 20 Partien; research-deep 15 bis 30 Minuten mit allen Quellen; team-prep ruft je Spieler eine Stufe auf.</desc>
+<defs><filter id="sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="rgb(0 0 0 / 40%)"/></filter></defs><g font-family="Manrope, Inter, 'Segoe UI', system-ui, -apple-system, sans-serif">
+<rect x="1" y="1" width="280" height="326" rx="14" fill="#161b22" stroke="#30363d" stroke-width="1.5" filter="url(#sh)"/>
+<circle cx="29" cy="38" r="5" fill="#6cb0e0"/>
+<text x="43" y="43" font-size="13" font-weight="700" letter-spacing="1.2" fill="#7d8590">STUFE 1</text>
+<text x="23" y="86" font-size="26" font-weight="750" letter-spacing="-0.6" fill="#f0f6fc">scout-fast</text>
+<rect x="23" y="104" width="84" height="28" rx="14.0" fill="#16324a"/><text x="65.0" y="123.0" font-size="14" font-weight="650" fill="#6cb0e0" text-anchor="middle">&lt; 1 min</text>
+<circle cx="29" cy="167" r="2.6" fill="#7d8590"/>
+<text x="41" y="172" font-size="15.5" fill="#9198a1">Steckbrief ohne Engine</text>
+<circle cx="29" cy="197" r="2.6" fill="#7d8590"/>
+<text x="41" y="202" font-size="15.5" fill="#9198a1">alle Partien, beide Farben</text>
+<circle cx="29" cy="227" r="2.6" fill="#7d8590"/>
+<text x="41" y="232" font-size="15.5" fill="#9198a1">Repertoire mit Score</text>
+<rect x="23" y="266" width="236" height="34" rx="9" fill="#0d1117" stroke="#30363d"/>
+<text x="37" y="288" font-size="14" fill="#f0f6fc" font-family="ui-monospace, 'Cascadia Code', Consolas, monospace">$ briefing.py scout</text>
+<rect x="307" y="1" width="280" height="326" rx="14" fill="#161b22" stroke="#30363d" stroke-width="1.5" filter="url(#sh)"/>
+<circle cx="335" cy="38" r="5" fill="#6cb0e0"/>
+<text x="349" y="43" font-size="13" font-weight="700" letter-spacing="1.2" fill="#7d8590">STUFE 2</text>
+<text x="329" y="86" font-size="26" font-weight="750" letter-spacing="-0.6" fill="#f0f6fc">briefing-medium</text>
+<rect x="329" y="104" width="84" height="28" rx="14.0" fill="#16324a"/><text x="371.0" y="123.0" font-size="14" font-weight="650" fill="#6cb0e0" text-anchor="middle">2–5 min</text>
+<circle cx="335" cy="167" r="2.6" fill="#7d8590"/>
+<text x="347" y="172" font-size="15.5" fill="#9198a1">Engine für 20 Partien</text>
+<circle cx="335" cy="197" r="2.6" fill="#7d8590"/>
+<text x="347" y="202" font-size="15.5" fill="#9198a1">eine Farbe oder beide</text>
+<circle cx="335" cy="227" r="2.6" fill="#7d8590"/>
+<text x="347" y="232" font-size="15.5" fill="#9198a1">kurzer belegter Matchplan</text>
+<rect x="329" y="266" width="236" height="34" rx="9" fill="#0d1117" stroke="#30363d"/>
+<text x="343" y="288" font-size="14" fill="#f0f6fc" font-family="ui-monospace, 'Cascadia Code', Consolas, monospace">$ briefing.py brief</text>
+<rect x="613" y="1" width="280" height="326" rx="14" fill="#161b22" stroke="#30363d" stroke-width="1.5" filter="url(#sh)"/>
+<circle cx="641" cy="38" r="5" fill="#6cb0e0"/>
+<text x="655" y="43" font-size="13" font-weight="700" letter-spacing="1.2" fill="#7d8590">STUFE 3</text>
+<text x="635" y="86" font-size="26" font-weight="750" letter-spacing="-0.6" fill="#f0f6fc">research-deep</text>
+<rect x="635" y="104" width="101" height="28" rx="14.0" fill="#16324a"/><text x="685.5" y="123.0" font-size="14" font-weight="650" fill="#6cb0e0" text-anchor="middle">15–30 min</text>
+<circle cx="641" cy="167" r="2.6" fill="#7d8590"/>
+<text x="653" y="172" font-size="15.5" fill="#9198a1">alle Quellen und Partien</text>
+<circle cx="641" cy="197" r="2.6" fill="#7d8590"/>
+<text x="653" y="202" font-size="15.5" fill="#9198a1">Online-Accounts, Profil</text>
+<circle cx="641" cy="227" r="2.6" fill="#7d8590"/>
+<text x="653" y="232" font-size="15.5" fill="#9198a1">Matchplan für beide Farben</text>
+<rect x="635" y="266" width="236" height="34" rx="9" fill="#0d1117" stroke="#30363d"/>
+<text x="649" y="288" font-size="14" fill="#f0f6fc" font-family="ui-monospace, 'Cascadia Code', Consolas, monospace">$ briefing.py prepare</text>
+<rect x="918" y="1" width="280" height="326" rx="14" fill="#161b22" stroke="#30363d" stroke-width="1.5" filter="url(#sh)"/>
+<circle cx="946" cy="38" r="5" fill="#e08a72"/>
+<text x="960" y="43" font-size="13" font-weight="700" letter-spacing="1.2" fill="#7d8590">MANNSCHAFT</text>
+<text x="940" y="86" font-size="26" font-weight="750" letter-spacing="-0.6" fill="#f0f6fc">team-prep</text>
+<rect x="940" y="104" width="149" height="28" rx="14.0" fill="#3a2119"/><text x="1014.5" y="123.0" font-size="14" font-weight="650" fill="#e08a72" text-anchor="middle">Stufe × Spieler</text>
+<circle cx="946" cy="167" r="2.6" fill="#7d8590"/>
+<text x="958" y="172" font-size="15.5" fill="#9198a1">Aufstellung einlesen</text>
+<circle cx="946" cy="197" r="2.6" fill="#7d8590"/>
+<text x="958" y="202" font-size="15.5" fill="#9198a1">je Spieler eine Stufe</text>
+<circle cx="946" cy="227" r="2.6" fill="#7d8590"/>
+<text x="958" y="232" font-size="15.5" fill="#9198a1">eine Seite, Spieler wählbar</text>
+<rect x="940" y="266" width="236" height="34" rx="9" fill="#0d1117" stroke="#30363d"/>
+<text x="954" y="288" font-size="14" fill="#f0f6fc" font-family="ui-monospace, 'Cascadia Code', Consolas, monospace">$ briefing.py team</text>
+</g></svg>

@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="430" viewBox="0 0 1200 430" role="img" aria-labelledby="t d"><title id="t">chess-opponent-prep</title><desc id="d">Gegnervorbereitung für Schach in vier Skills: scout-fast, briefing-medium, research-deep, team-prep.</desc>
+<defs><filter id="sh" x="-10%" y="-10%" width="120%" height="140%"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="rgb(16 24 40 / 8%)"/></filter></defs>
+<rect x="1" y="1" width="1198" height="428" rx="20" fill="#ffffff" stroke="#e5e7eb" stroke-width="2"/>
+<g font-family="Manrope, Inter, 'Segoe UI', system-ui, -apple-system, sans-serif">
+<rect x="56" y="52" width="247" height="28" rx="14.0" fill="#ebf3f9"/><text x="179.5" y="71.0" font-size="14" font-weight="650" fill="#236492" text-anchor="middle">Schach · Gegnervorbereitung</text>
+<text x="54" y="150" font-size="66" font-weight="800" letter-spacing="-2.6" fill="#111827">chess-opponent-prep</text>
+<text x="56" y="194" font-size="21" fill="#4b5563">Vom Steckbrief vor der Runde bis zur ganzen Mannschaft –</text>
+<text x="56" y="222" font-size="21" fill="#4b5563">offline, mit Belegen, in Sekunden bis Minuten.</text>
+<rect x="56" y="250" width="602" height="44" rx="12" fill="#f3f4f6" stroke="#e5e7eb"/>
+<rect x="59" y="253" width="128" height="38" rx="9" fill="#ffffff" stroke="#e5e7eb" filter="url(#sh)"/>
+<text x="123.0" y="278" font-size="15" font-weight="650" fill="#111827" text-anchor="middle">scout-fast</text>
+<text x="277.0" y="278" font-size="15" font-weight="650" fill="#4b5563" text-anchor="middle">briefing-medium</text>
+<text x="447.0" y="278" font-size="15" font-weight="650" fill="#4b5563" text-anchor="middle">research-deep</text>
+<text x="593.0" y="278" font-size="15" font-weight="650" fill="#4b5563" text-anchor="middle">team-prep</text>
+<rect x="56" y="318" width="254" height="82" rx="14" fill="#ffffff" stroke="#e5e7eb" filter="url(#sh)"/>
+<circle cx="78" cy="345" r="4" fill="#b55b43"/>
+<text x="90" y="350" font-size="14" font-weight="600" fill="#4b5563">Skills</text>
+<text x="74" y="382" font-size="26" font-weight="700" letter-spacing="-0.5" fill="#111827">4</text>
+<rect x="328" y="318" width="254" height="82" rx="14" fill="#ffffff" stroke="#e5e7eb" filter="url(#sh)"/>
+<circle cx="350" cy="345" r="4" fill="#236492"/>
+<text x="362" y="350" font-size="14" font-weight="600" fill="#4b5563">Steckbrief</text>
+<text x="346" y="382" font-size="26" font-weight="700" letter-spacing="-0.5" fill="#111827">&lt; 1 min</text>
+<rect x="600" y="318" width="254" height="82" rx="14" fill="#ffffff" stroke="#e5e7eb" filter="url(#sh)"/>
+<circle cx="622" cy="345" r="4" fill="#236492"/>
+<text x="634" y="350" font-size="14" font-weight="600" fill="#4b5563">Briefing</text>
+<text x="618" y="382" font-size="26" font-weight="700" letter-spacing="-0.5" fill="#111827">2–5 min</text>
+<rect x="872" y="318" width="254" height="82" rx="14" fill="#ffffff" stroke="#e5e7eb" filter="url(#sh)"/>
+<circle cx="894" cy="345" r="4" fill="#236492"/>
+<text x="906" y="350" font-size="14" font-weight="600" fill="#4b5563">Report</text>
+<text x="890" y="382" font-size="26" font-weight="700" letter-spacing="-0.5" fill="#111827">Offline-HTML</text>
+<g transform="translate(930 52)">
+<rect x="-2" y="-2" width="212" height="212" rx="12" fill="#e5e7eb"/>
+<clipPath id="bc"><rect width="208" height="208" rx="10"/></clipPath><g clip-path="url(#bc)">
+<rect x="0" y="0" width="26" height="26" fill="#ffffff"/>
+<rect x="26" y="0" width="26" height="26" fill="#ebf3f9"/>
+<rect x="52" y="0" width="26" height="26" fill="#ffffff"/>
+<rect x="78" y="0" width="26" height="26" fill="#ebf3f9"/>
+<rect x="104" y="0" width="26" height="26" fill="#ffffff"/>
+<rect x="130" y="0" width="26" height="26" fill="#ebf3f9"/>
+<rect x="156" y="0" width="26" height="26" fill="#ffffff"/>
+<rect x="182" y="0" width="26" height="26" fill="#ebf3f9"/>
+<rect x="0" y="26" width="26" height="26" fill="#ebf3f9"/>
+<rect x="26" y="26" width="26" height="26" fill="#ffffff"/>
+<rect x="52" y="26" width="26" height="26" fill="#ebf3f9"/>
+<rect x="78" y="26" width="26" height="26" fill="#ffffff"/>
+<rect x="104" y="26" width="26" height="26" fill="#ebf3f9"/>
+<rect x="130" y="26" width="26" height="26" fill="#ffffff"/>
+<rect x="156" y="26" width="26" height="26" fill="#ebf3f9"/>
+<rect x="182" y="26" width="26" height="26" fill="#ffffff"/>
+<rect x="0" y="52" width="26" height="26" fill="#ffffff"/>
+<rect x="26" y="52" width="26" height="26" fill="#ebf3f9"/>
+<rect x="52" y="52" width="26" height="26" fill="#ffffff"/>
+<rect x="78" y="52" width="26" height="26" fill="#ebf3f9"/>
+<rect x="104" y="52" width="26" height="26" fill="#ffffff"/>
+<rect x="130" y="52" width="26" height="26" fill="#ebf3f9"/>
+<rect x="156" y="52" width="26" height="26" fill="#ffffff"/>
+<rect x="182" y="52" width="26" height="26" fill="#ebf3f9"/>
+<rect x="0" y="78" width="26" height="26" fill="#ebf3f9"/>
+<rect x="26" y="78" width="26" height="26" fill="#ffffff"/>
+<rect x="52" y="78" width="26" height="26" fill="#ebf3f9"/>
+<rect x="78" y="78" width="26" height="26" fill="#ffffff"/>
+<rect x="104" y="78" width="26" height="26" fill="#ebf3f9"/>
+<rect x="130" y="78" width="26" height="26" fill="#ffffff"/>
+<rect x="156" y="78" width="26" height="26" fill="#ebf3f9"/>
+<rect x="182" y="78" width="26" height="26" fill="#ffffff"/>
+<rect x="0" y="104" width="26" height="26" fill="#ffffff"/>
+<rect x="26" y="104" width="26" height="26" fill="#ebf3f9"/>
+<rect x="52" y="104" width="26" height="26" fill="#ffffff"/>
+<rect x="78" y="104" width="26" height="26" fill="#ebf3f9"/>
+<rect x="104" y="104" width="26" height="26" fill="#f3d9a4"/>
+<rect x="130" y="104" width="26" height="26" fill="#ebf3f9"/>
+<rect x="156" y="104" width="26" height="26" fill="#ffffff"/>
+<rect x="182" y="104" width="26" height="26" fill="#ebf3f9"/>
+<rect x="0" y="130" width="26" height="26" fill="#ebf3f9"/>
+<rect x="26" y="130" width="26" height="26" fill="#ffffff"/>
+<rect x="52" y="130" width="26" height="26" fill="#ebf3f9"/>
+<rect x="78" y="130" width="26" height="26" fill="#ffffff"/>
+<rect x="104" y="130" width="26" height="26" fill="#ebf3f9"/>
+<rect x="130" y="130" width="26" height="26" fill="#ffffff"/>
+<rect x="156" y="130" width="26" height="26" fill="#ebf3f9"/>
+<rect x="182" y="130" width="26" height="26" fill="#ffffff"/>
+<rect x="0" y="156" width="26" height="26" fill="#ffffff"/>
+<rect x="26" y="156" width="26" height="26" fill="#ebf3f9"/>
+<rect x="52" y="156" width="26" height="26" fill="#ffffff"/>
+<rect x="78" y="156" width="26" height="26" fill="#ebf3f9"/>
+<rect x="104" y="156" width="26" height="26" fill="#f3d9a4"/>
+<rect x="130" y="156" width="26" height="26" fill="#ebf3f9"/>
+<rect x="156" y="156" width="26" height="26" fill="#ffffff"/>
+<rect x="182" y="156" width="26" height="26" fill="#ebf3f9"/>
+<rect x="0" y="182" width="26" height="26" fill="#ebf3f9"/>
+<rect x="26" y="182" width="26" height="26" fill="#ffffff"/>
+<rect x="52" y="182" width="26" height="26" fill="#ebf3f9"/>
+<rect x="78" y="182" width="26" height="26" fill="#ffffff"/>
+<rect x="104" y="182" width="26" height="26" fill="#ebf3f9"/>
+<rect x="130" y="182" width="26" height="26" fill="#ffffff"/>
+<rect x="156" y="182" width="26" height="26" fill="#ebf3f9"/>
+<rect x="182" y="182" width="26" height="26" fill="#ffffff"/>
+</g><g fill="#236492" opacity=".85"><rect x="113.0" y="129.0" width="8" height="40.0" rx="4"/><path d="M117.0 115.0 L129.0 133.0 L105.0 133.0 Z"/></g></g>
+</g></svg>
