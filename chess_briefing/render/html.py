@@ -1,4 +1,4 @@
-"""Report-HTML (eine Datei, offline) aus dossier.json + briefing.json + viewer.json."""
+"""Report-HTML (eine Datei, offline) aus dossier.json + matchplan.json + viewer.json."""
 from __future__ import annotations
 
 import datetime as dt
@@ -9,7 +9,7 @@ from pathlib import Path
 import chess
 import chess.svg
 
-from .. import config
+from .. import config, paths as P
 from ..util import read_json
 from . import charts
 
@@ -187,7 +187,7 @@ def head(d, b) -> str:
     mode = d.get("mode") or {}
     if mode.get("badge"):
         chips.insert(0, f'<span class="tb-badge cb-badge--mode">{e(mode["badge"])}</span>')
-    # caveats aus briefing.json werden nicht mehr angezeigt: die Datenlage steht in den Plaketten oben und in "watch"
+    # caveats aus matchplan.json werden nicht mehr angezeigt: die Datenlage steht in den Plaketten oben und in "watch"
     # Kacheln oben rechts: nur Bezeichnung und Zahl
     ratings = []
     if elo.get("standard"):
@@ -257,7 +257,7 @@ def _seg5(step: int | None, label: str) -> str:
 
 
 def _scale(ax: dict) -> str:
-    """Eine Achse: Titel, Segmentleiste, Pole. Zahlen, Fallzahl und Beleg stehen in brief.md."""
+    """Eine Achse: Titel, Segmentleiste, Pole. Zahlen, Fallzahl und Beleg stehen in dossier.md."""
     left, right = POLES.get(ax["key"], (ax["labels"][0], ax["labels"][4]))
     return (f'<div class="cb-scale"><div class="cb-scale__title">{e(ax["title"])}</div>{_seg5(ax.get("step"), ax["label"])}'
             f'<div class="cb-scale__poles"><span>{e(left)}</span><span>{e(right)}</span></div></div>')
@@ -474,7 +474,7 @@ def plan_panel(side: str, p: dict, d: dict, checks: dict, mine: dict | None = No
 
 def plan_section(b, d, checks, mine: dict | None = None) -> str:
     if not b:
-        return section("plan", "Matchplan", '<div class="tb-empty">Noch kein Matchplan (briefing.json fehlt). '
+        return section("plan", "Matchplan", '<div class="tb-empty">Noch kein Matchplan (matchplan.json fehlt). '
                        'Die Datenabschnitte unten sind vollständig.</div>')
     cs = d["color_stats"]
     sides = tuple((d.get("mode") or {}).get("sides") or ("as_white", "as_black"))
@@ -862,14 +862,14 @@ def page(d: dict, b: dict | None, sections: list[tuple[str, str, str]], payload:
 
 
 def render_player(pdir: Path, with_me: bool = True) -> Path:
-    """Report einer Stufe aus ihrem Datenordner: research (Gegnerordner), briefing-medium (Unterordner medium_*),
-    scout-fast (Unterordner scout). Die Stufe steht in dossier.mode."""
+    """Report einer Stufe aus ihrem Datenordner (scout/, briefing[_ich-weiss]/, research/); der Report liegt im
+    Spielerordner darueber. Die Stufe steht in dossier.mode."""
     d = read_json(pdir / "dossier.json")
-    mode = (d.get("mode") or {}).get("name", "research")
+    mode = P.stage((d.get("mode") or {}).get("name", "research"))
     if mode == "scout":
         from .scout import render_scout
         return render_scout(pdir, d)
-    b = read_json(pdir / "briefing.json")
+    b = read_json(P.file(pdir, P.MATCHPLAN))
     viewer = read_json(pdir / "viewer.json", {})
     checks = {c["id"]: c for c in read_json(pdir / "engine_checks.json", []) or []}
     from ..profile import corridor, load_me
@@ -887,10 +887,12 @@ def render_player(pdir: Path, with_me: bool = True) -> Path:
         ("form", "Form", form_section(d)),
         ("kennzahlen", "Kennzahlen", facts_section(d)),
     ]
-    slug = d["identity"]["slug"]
-    if mode == "medium":
+    root = P.player_root(pdir)
+    if mode == "briefing":
         m = d["mode"]
-        return page(d, b, sections, payload_for(pdir, d, viewer, with_me), f"Briefing {d['identity']['display']} ({m['label']})",
-                    pdir.parent / f"briefing_{slug}_{m['folder']}.html", "chess-opponent-briefing-medium")
-    return page(d, b, sections, payload_for(pdir, d, viewer, with_me), f"Briefing {d['identity']['display']}",
-                pdir / f"briefing_{slug}.html")
+        out = page(d, b, sections, payload_for(pdir, d, viewer, with_me), f"Briefing {d['identity']['display']} ({m['label']})",
+                   P.report_path(root, "briefing", m.get("color")), "chess-opponent-briefing-medium")
+        P.legacy_report(root, m.get("color")).unlink(missing_ok=True)
+        return out
+    return page(d, b, sections, payload_for(pdir, d, viewer, with_me), f"Recherche {d['identity']['display']}",
+                P.report_path(root, "research"))

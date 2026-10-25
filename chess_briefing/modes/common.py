@@ -2,7 +2,8 @@
 
 * Deadline: feste Zeitgrenze ab Programmstart; jede Stufe fragt die Restzeit ab.
 * timed(): Netzschritt mit Zeitlimit in einem Hintergrund-Thread; laeuft er zu lange, geht es ohne ihn weiter.
-* fast_sources(): nur Quellen, die sofort da sind (inbox/-PGNs: ChessBase, chess-results, lokale Importe).
+* timed_all(): mehrere solche Schritte gleichzeitig, Ergebnisse in fester Reihenfolge.
+* fast_sources(): nur Quellen, die sofort da sind (inbox/-PGNs: ChessBase, chess-results, lokale Importe), parallel.
 * plain_annotation(): Partie-Kennzeichen ohne Engine (Eroeffnungsname, Struktur, Uhr) fuer Baum und Viewer.
 """
 from __future__ import annotations
@@ -17,10 +18,9 @@ import chess
 
 from .. import config, games as G
 from ..openings import family, label_for_player, name_line
-from ..util import log
+from ..util import log, log_tag, set_log_tag
 
 COLOR_DE = {"white": "Weiß", "black": "Schwarz"}
-FOLDER = {"white": "als-weiss", "black": "als-schwarz", "both": "beide"}
 COLORS = ("white", "black", "both")
 
 
@@ -93,6 +93,29 @@ def timed(name: str, fn, seconds: float, srclog: list | None = None):
     return box.get("r")
 
 
+def timed_all(tasks: list[tuple]) -> list[tuple]:
+    """Mehrere (name, fn, Sekunden) wie timed(), aber gleichzeitig: die Quellen warten aufeinander nicht mehr.
+    Rueckgabe in der Reihenfolge von tasks, unabhaengig davon, welche Quelle zuerst fertig ist:
+    (Ergebnis oder None, Sekunden, Hinweise fuer das Quellenprotokoll bei Fehler oder Zeitlimit)."""
+    tag = log_tag()
+    out: list = [None] * len(tasks)
+    notes: list[list] = [[] for _ in tasks]
+
+    def run(k, name, fn, seconds):
+        set_log_tag(tag)
+        t = time.monotonic()
+        r = timed(name, fn, seconds, notes[k])
+        secs = round(time.monotonic() - t, 1)
+        out[k] = (r, secs, [dict(n, seconds=secs) for n in notes[k]])
+    ths = [threading.Thread(target=run, args=(k, *task), daemon=True, name=f"quelle-{task[0]}")
+           for k, task in enumerate(tasks)]
+    for th in ths:
+        th.start()
+    for th in ths:
+        th.join()
+    return out
+
+
 def _note(srclog, name, status, detail):
     if srclog is not None:
         srclog.append({"source": name, "status": status, "detail": detail})
@@ -158,13 +181,14 @@ def fast_sources(ident, inbox: Path, dl: Deadline, srclog: list, chessresults_s:
     from ..sources import chessbase, chessresults, local
     pull_download(ident, inbox)
     texts = []
-    for name, fn, limit in (("chessbase", lambda: chessbase.collect(ident, inbox), 20.0),
-                            ("chess-results", lambda: chessresults.collect(ident, inbox), chessresults_s),
-                            ("lokal", lambda: local.collect(ident, inbox), 15.0)):
-        r = timed(name, fn, min(limit, dl.left(reserve=20)), srclog)
+    tasks = [("chessbase", lambda: chessbase.collect(ident, inbox), 20.0),
+             ("chess-results", lambda: chessresults.collect(ident, inbox), chessresults_s),
+             ("lokal", lambda: local.collect(ident, inbox), 15.0)]
+    for r, secs, notes in timed_all([(n, fn, min(limit, dl.left(reserve=20))) for n, fn, limit in tasks]):
+        srclog += notes
         if r:
             texts.append(r[0])
-            srclog += r[1]
+            srclog += [dict(row, seconds=secs) for row in r[1]]
     games = []
     for t in texts:
         if t:
@@ -265,8 +289,9 @@ def results(gs: list[dict]) -> dict:
 
 
 def output_dir(pdir: Path, mode: str, color: str | None = None) -> Path:
-    """output/players/<slug>/scout/ bzw. output/players/<slug>/medium_als-weiss/ (research bleibt im Gegnerordner selbst)."""
-    return pdir / (mode if mode == "scout" else f"{mode}_{FOLDER[color]}")
+    """Datenordner der Stufe: output/players/<slug>/scout/, briefing/ bzw. briefing_ich-weiss/ (siehe paths.py)."""
+    from .. import paths
+    return paths.stage_dir(pdir, mode, color)
 
 
 def stale_cut() -> int:

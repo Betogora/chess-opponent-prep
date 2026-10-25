@@ -74,7 +74,7 @@ ONLINE_POOL_MAX = 10000          # alle Partien des Zeitraums (ohne Bullet) fuer
 ONLINE_SAMPLE = 100              # ... daraus 100 fuer die Analyse: gleichmaessig ueber die Zeit, lange Bedenkzeit zuerst
 ONLINE_MIN_RECENT = 20           # weniger aktuelle Partien -> Rueckfall auf Fund-Partien (als veraltet markiert)
 ONLINE_BUDGET_S = 240            # Zeitbudget der Kandidatensuche fuer die breiten Schritte (Vereinsmitglieder,
-                                 # Chess.com-Club); Namens-, Muster- und research.json-Kandidaten immer vollstaendig
+                                 # Chess.com-Club); Namens-, Muster- und accounts.json-Kandidaten immer vollstaendig
 
 # --- Spielerprofil (profile.py) -------------------------------------------
 ONLY_MOVE_GAP = 0.10             # scharf = zweitbester Zug mindestens 10 Prozentpunkte Erwartungswert schlechter

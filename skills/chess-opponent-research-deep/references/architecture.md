@@ -4,8 +4,8 @@
 | Stufe | Einstieg | Quellen | Engine | Text | Daten / Report |
 |---|---|---|---|---|---|
 | scout-fast | `modes/scout.py` (`briefing.py scout`) | inbox (ChessBase, chess-results), chess-results-Abruf mit Zeitlimit | – | Regeln im Programm | `output/players/<slug>/scout/`, `scout_<slug>.html` |
-| briefing-medium | `modes/medium.py` (`briefing.py brief`) | wie scout; Lichess-Übertragungen nur als Ersatz | 20 jüngste Partien einer Farbe, Zeitgrenze | Agent, eine Seite | `output/players/<slug>/medium_als-weiss/`, `briefing_<slug>_als-weiss.html` |
-| research-deep | `pipeline.prepare` (`briefing.py prepare`) | alle | alle Partien | Agent, beide Seiten | `output/players/<slug>/`, `briefing_<slug>.html` |
+| briefing-medium | `modes/medium.py` (`briefing.py brief`) | wie scout; Lichess-Übertragungen nur als Ersatz | 20 jüngste Partien einer Farbe, Zeitgrenze | Agent, eine oder beide Seiten | `output/players/<slug>/briefing[_ich-weiss]/`, `briefing_<slug>[_ich-weiss].html` |
+| research-deep | `pipeline.prepare` (`briefing.py prepare`) | alle | alle Partien | Agent, beide Seiten | `output/players/<slug>/research/`, `research_<slug>.html` |
 
 - `modes/common.py`: `Deadline` (Zeitgrenze ab Start), `timed()` (Netzschritt mit Zeitlimit im Hintergrund-Thread),
   `fast_sources()`, `pull_download()` (ChessBase-PGN aus dem Download-Ordner), `plain_annotation()`/`plain_viewer()`
@@ -22,7 +22,7 @@
   (`--boards`, gegen die Spielernummer), setzt die Farbe je Brett und ruft je Spieler `scout.run_result`,
   `medium.run_result` bzw. `pipeline.prepare` auf. `render/team.py` baut daraus eine Seite: Übersicht + Spielerknöpfe,
   jeder Einzelreport gzip/base64 eingebettet und erst beim Umschalten entpackt (iframe `srcdoc`).
-  Daten: `output/teams/<mannschaft>/team_<stufe>.json`.
+  Daten: `output/teams/<mannschaft>/team_<mannschaft>_<stufe>.json`.
 - Beide Farben (`--color both`): scout zeigt beide gleichrangig; medium analysiert je Farbe `games/2` Partien,
   Matchplan mit beiden Seiten (`dossier.mode.sides`).
 - Neue Stufe: Modul in `modes/` mit `run(...) -> int`, Befehl in `briefing.py`, Ansicht in `render/`, Skill in
@@ -55,15 +55,15 @@ online/                  Online-Accounts und Kurse
   ├ lichess_analysis.py  Lichess-Serveranalyse → Stellungsformat von engine.py (kein lokales Stockfish fuer online)
   ├ fingerprint.py       Eröffnungs-Fingerabdruck (Lift gegenüber allen Kandidaten)
   ├ rating_map.py        Online-Wertung → erwartete Elo (nichtlinear je Plattform/Bedenkzeit), DWZ → Elo, Plausibilität (z)
-  ├ accounts.py          Kandidaten, Konfidenzformel (WEIGHTS), research.json (inkl. username_patterns), Online-Vollbaum,
+  ├ accounts.py          Kandidaten, Konfidenzformel (WEIGHTS), accounts.json (inkl. username_patterns), Online-Vollbaum,
   │                      Trends, Abgleich, Belege O…; läuft auch ohne Turnierpartien (dann ohne Fingerabdruck)
   └ chessable.py         Accountprüfung, Kurssuche, Kursfamilien-Abgleich (data/course_signatures.json)
 profile.py               Spielerprofil: 8 Achsen (Vorliebe getrennt von Können), Teil-Elo je Stellungsart/Phase über
                          Vergleichskurven, Typ-Etikett, Belege P…; Zielkorridor aus me.json, Belege M…
 calibrate.py             Vergleichskurven aus Lichess-Übertragungen (FIDE-Elo, lange Bedenkzeit) → data/elo_curves.json
-dossier.py               Belege F… (mit scope white/black/all), Schlüsselstellungen K…, brief.md
+dossier.py               Belege F… (mit scope white/black/all), Schlüsselstellungen K…, dossier.md
   ▼
-[Agent schreibt briefing.json]
+[Agent schreibt matchplan.json]
   ▼
 validate.py              Pflichtfelder, Perspektive, Online/Turnier-Trennung, legale Züge, Zahlen ↔ Belege, Floskeln
 pipeline.validate        + Beleg-Stempel (_evidence_snapshot)
@@ -73,9 +73,12 @@ maintenance.py           setup, doctor, pack
 
 ## Determinismus
 - Engine: Tiefenlimit, `Threads=1`, feste Abschnitte (`ENGINE_CHUNK_PLIES`) mit `ucinewgame` je Abschnitt → gleiche Zahlen
-  bei gleicher Stockfish-Version, unabhängig von der Zahl der Prozesse. Nachgerechnet wird ein Zug, der aus umkämpfter
+  bei gleicher Stockfish-Version, unabhängig von der Zahl der Prozesse. Caches (Partie-Analyse, `cache/positions.sqlite`)
+  sind nach der UCI-Version der Engine verschlüsselt (`engine.engine_id`), ein neues Binary rechnet also neu. Nachgerechnet wird ein Zug, der aus umkämpfter
   Stellung (`TRIAGE_LIVE`) vorab mehr als `TRIAGE_LOSS` Erwartungswert verliert; die Auswahl hängt nur von der Vorab-Rechnung ab.
-- Stufen je Partie: base (alle Stellungen) → deep (verdächtige Züge) → alt. Der zweitbeste Zug (MultiPV 2) wird nur
+- Stufen je Partie: base (alle Stellungen) → deep (verdächtige Züge) → alt. Verdächtige Züge, deren beide Stellungen
+  im selben Abschnitt liegen, rechnet der base-Auftrag gleich danach mit warmem Hash nach (gemessen 16 % schneller);
+  nur Paare über eine Abschnittsgrenze laufen als eigener deep-Auftrag. Der zweitbeste Zug (MultiPV 2) wird nur
   dort gerechnet, wo `profile.move_class` ihn auswertet (`engine.alt_positions`: eigener Zug ab `PROFILE_MIN_MOVE`,
   umkämpft, nicht Endspiel); geprüft an 91 Partien: identische Profilwerte bei 31 % der bisherigen alt-Stellungen.
 - Last: `ENGINE_WORKERS` = alle Kerne (Umgebungsvariable `BRIEFING_WORKERS` überschreibt), Priorität „niedriger als
@@ -87,7 +90,7 @@ maintenance.py           setup, doctor, pack
 - Cache: Analysen in voller Tiefe 18 (ältere Läufe) bleiben gültig; fehlt der zweitbeste Zug, wird nur er ergänzt.
 - Netz: Online-Kandidatensuche (`accounts.discover`) läuft in `pipeline.prepare` parallel zur Engine. Gleichzeitige
   Anfragen je Host über `util.host_gate` (Lichess 1, Chess.com 4); breite Schritte (Vereinsmitglieder, Chess.com-Club)
-  enden nach `ONLINE_BUDGET_S`, Namens-, Muster- und research.json-Kandidaten werden immer vollständig geprüft.
+  enden nach `ONLINE_BUDGET_S`, Namens-, Muster- und accounts.json-Kandidaten werden immer vollständig geprüft.
 - Sortierungen mit vollständigem Schlüssel (Gleichstand → Zugfolge/ID), damit Beleg-IDs stabil bleiben.
 - Online-Stichprobe: `sample_stratified` (12 Zeitabschnitte, gleiche Quote, lange Bedenkzeit und analysierte Partien zuerst, kein Zufall).
 - Online-Baum: alle Partien; Knoten unter `min(5, Partien/400)` Partien entfallen, außer sie liegen auf einer Stichprobenpartie.
@@ -107,21 +110,25 @@ maintenance.py           setup, doctor, pack
 ## Ordner eines Gegners (`output/players/<slug>/`)
 | Datei | Inhalt |
 |---|---|
-| `identity.json` | Identifikation mit Notizen und Alternativen |
+Namen stehen zentral in `chess_briefing/paths.py`; alte Namen (vor 1.1) liest das Programm weiter,
+`python briefing.py migrate` stellt sie um. Farbe im Namen nur, wenn sie den Inhalt einschränkt (`ich-weiss` = Nutzer hat Weiß).
+
+| Datei | Inhalt |
+|---|---|
+| `scout_<slug>.html`, `briefing_<slug>[_ich-weiss\|_ich-schwarz].html`, `research_<slug>.html` | fertige Reports je Stufe |
+| `identity.json` | Identifikation mit Notizen und Alternativen (gemeinsam) |
 | `inbox/` | manuell oder per Browser geholte PGNs (`chessbase_*`, `chessresults_*` lesen ihre Quellen, alles andere `local.py`) |
-| `games.pgn` | zusammengeführte Turnierpartien |
-| `analysis/` | Engine-Cache je Partie |
-| `dossier.json`, `viewer.json` | Kennzahlen, Bäume, Belege / Zugdaten für den Viewer |
-| `brief.md` | Schreibgrundlage für den Matchplan |
-| `online_accounts.json` | Kandidaten mit Konfidenz und Begründung, Stichprobe |
-| `research.json` | manuelle Entscheidungen (Accounts, Teams, Clubs, `extra_candidates`, `username_patterns`) |
-| `engine_checks.json` | Belege E… |
-| `briefing.json` | Matchplan (vom Agenten) |
-| `briefing_<slug>.html` | fertiger Report (research-deep) |
-| `scout/`, `scout_<slug>.html` | Daten und Report von scout-fast |
-| `medium_als-weiss/`, `briefing_<slug>_als-weiss.html` | Daten (dossier, brief.md, briefing.json, engine_checks) und Report von briefing-medium; analog `als-schwarz` |
-| `me.json` | optional: Eigenprofil nur für dieses Briefing (überlagert `me.json` in der Projektwurzel) |
-| `me_used.json` | tatsächlich verwendetes Eigenprofil (Nachvollziehbarkeit) |
+| `analysis/` | Engine-Cache je Partie (gemeinsam für briefing und research) |
+| `me.json` | optional: Eigenprofil nur für diesen Gegner (überlagert `me.json` in der Projektwurzel) |
+| `scout/`, `briefing[_ich-weiss\|_ich-schwarz]/`, `research/` | Datenordner je Stufe, darin: |
+| … `dossier.json`, `viewer.json` | Kennzahlen, Bäume, Belege / Zugdaten für den Viewer |
+| … `dossier.md` | Schreibgrundlage für den Matchplan (Vorlage für den Agenten) |
+| … `matchplan.json` | Matchplan (vom Agenten) |
+| … `engine_checks.json` | Belege E… |
+| … `me_used.json` | tatsächlich verwendetes Eigenprofil (Nachvollziehbarkeit) |
+| `research/games.pgn`, `sources.json`, `team_results.json` | zusammengeführte Turnierpartien, Quellenprotokoll, Mannschaftsergebnisse |
+| `research/online_accounts.json` | Kandidaten mit Konfidenz und Begründung, Stichprobe |
+| `research/accounts.json` | manuelle Entscheidungen (Accounts, Teams, Clubs, `extra_candidates`, `username_patterns`) |
 
 Projektwurzel: `me.json` (Voreinstellung Eigenprofil, privat, nicht in `pack`). `chess_briefing/data/elo_curves.json`
 (Vergleichskurven, nur Durchschnittswerte, in `pack`), `data/calibration_tours.json` (Turnierliste dafür).

@@ -1,7 +1,7 @@
 ---
 name: chess-opponent-scout-fast
 description: "Schneller Gegner-Steckbrief für Schach (Stufe 1 von 3, unter 1 Minute, sobald die ChessBase-Partien da sind). Ohne Engine, ohne Online-Suche, ohne KI-Text – alle sofort verfügbaren Turnierpartien (ChessBase, chess-results, inbox) beider Farben als HTML mit Eröffnungsbaum, Repertoire mit Score je Linie, Ergebnissen, Form und Partien-Viewer; die Farbe des Gegners in der anstehenden Partie steht oben. Auslöser: „kurz vor der Runde“, „schneller Check“, „Steckbrief zu …“, „schnell schauen, was … spielt“."
-version: 1.0.0
+version: 1.1.0
 ---
 
 # chess-opponent-scout-fast

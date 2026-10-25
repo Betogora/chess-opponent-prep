@@ -28,6 +28,18 @@ class Deadline(unittest.TestCase):
         self.assertLess(time.monotonic() - t0, 2.0)          # wartet nicht auf die Quelle
         self.assertEqual(log[0]["status"], "zeitlimit")
 
+    def test_parallel_steps_overlap_and_keep_their_order(self):
+        def boom():
+            raise ValueError("kaputt")
+        t0 = time.monotonic()
+        out = C.timed_all([("langsam", lambda: time.sleep(0.4) or "a", 5), ("schnell", lambda: "b", 5),
+                           ("fehler", boom, 5), ("zu spät", lambda: time.sleep(5), 0.3)])
+        self.assertLess(time.monotonic() - t0, 1.5)           # gleichzeitig, nicht 0,4 + 0,3 s nacheinander
+        self.assertEqual([r for r, _, _ in out], ["a", "b", None, None])
+        self.assertGreaterEqual(out[0][1], 0.4)               # Sekunden je Quelle
+        self.assertEqual([n[0]["status"] for _, _, n in out[2:]], ["fehler", "zeitlimit"])
+        self.assertIn("seconds", out[3][2][0])
+
     def test_no_budget_left_skips_step(self):
         log = []
         self.assertIsNone(C.timed("x", lambda: 1, 0, log))
@@ -66,8 +78,9 @@ class Selection(unittest.TestCase):
     def test_output_folders(self):
         p = Path("players/x")
         self.assertEqual(C.output_dir(p, "scout").name, "scout")
-        self.assertEqual(C.output_dir(p, "medium", "white").name, "medium_als-weiss")
-        self.assertEqual(C.output_dir(p, "medium", "black").name, "medium_als-schwarz")
+        self.assertEqual(C.output_dir(p, "briefing", "white").name, "briefing_ich-weiss")
+        self.assertEqual(C.output_dir(p, "medium", "black").name, "briefing_ich-schwarz")   # alter Stufenname
+        self.assertEqual(C.output_dir(p, "briefing", "both").name, "briefing")              # beide: ohne Farbe
 
     def test_chessbase_download_is_taken_into_inbox(self):
         with tempfile.TemporaryDirectory() as tmp:

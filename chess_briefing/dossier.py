@@ -1,7 +1,7 @@
 """Dossier: alle Kennzahlen als JSON (fuer den Renderer) + Belegliste (Facts) + Schreib-Brief (Markdown).
 
 Facts sind kurze, pruefbare Aussagen mit Stichprobe und ID (F1, F2, ...). Der Matchplan
-(briefing.json) zitiert sie per ID; validate.py prueft Perspektive und Zahlen dagegen.
+(matchplan.json) zitiert sie per ID; validate.py prueft Perspektive und Zahlen dagegen.
 scope: 'white' = Gegner mit Weiss (relevant, wenn ICH Schwarz habe), 'black' = Gegner mit Schwarz
 (relevant, wenn ICH Weiss habe), 'all' = farbunabhaengig.
 """
@@ -348,9 +348,9 @@ def write_brief(dossier: dict, path, mine: dict | None = None) -> None:
         L.append(f"- {c['platform']} **{c['username']}** – {round(c['confidence'] * 100)} % – " + "; ".join(c.get("reasons", [])))
     if not onl.get("active") and acc.get("ambiguous"):
         L.append(f"- Mehrdeutig: {len(acc['ambiguous'])} Kandidaten über 50 % ohne klaren Abstand, keiner übernommen. "
-                 "Keine Online-Felder verwenden; der Nutzer kann einen in research.json bestätigen.")
+                 "Keine Online-Felder verwenden; der Nutzer kann einen in accounts.json bestätigen.")
     elif not onl.get("active"):
-        L.append("- Kein Account mit Konfidenz >= 50 %: keine Online-Felder (`online`) im briefing.json verwenden.")
+        L.append("- Kein Account mit Konfidenz >= 50 %: keine Online-Felder (`online`) in matchplan.json verwenden.")
     else:
         L += ["", "### Online-Regeln",
               "- Online-Aussagen stehen NUR in den Feldern `online` (Eröffnungskarte, Plan-Schritt, Vermeiden, Ziel) und zitieren NUR O…-Belege.",

@@ -39,14 +39,13 @@ def _move_accuracy(wp_before: float, wp_after: float) -> float:
 
 
 def _pieces(board: chess.Board) -> int:
-    return sum(len(board.pieces(pt, c)) for pt in (chess.KNIGHT, chess.BISHOP, chess.ROOK, chess.QUEEN)
-               for c in (chess.WHITE, chess.BLACK))
+    """Leicht- und Schwerfiguren beider Seiten (ohne Bauern und Koenige)."""
+    return chess.popcount(board.occupied & ~board.pawns & ~board.kings)
 
 
 def _backrank_sparse(board: chess.Board) -> bool:
-    w = sum(1 for sq in chess.SquareSet(chess.BB_RANK_1) if (p := board.piece_at(sq)) and p.color == chess.WHITE)
-    b = sum(1 for sq in chess.SquareSet(chess.BB_RANK_8) if (p := board.piece_at(sq)) and p.color == chess.BLACK)
-    return w < 4 or b < 4
+    return (chess.popcount(board.occupied_co[chess.WHITE] & chess.BB_RANK_1) < 4
+            or chess.popcount(board.occupied_co[chess.BLACK] & chess.BB_RANK_8) < 4)
 
 
 def phases_for(ucis: list[str]) -> list[str]:

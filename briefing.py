@@ -12,13 +12,14 @@ Stufe 1 - chess-opponent-scout-fast (Steckbrief ohne Engine, Sekunden):
       --color = DEINE Farbe. Alle schnell verfuegbaren Partien (ChessBase, chess-results, inbox) beider Farben,
       seine Farbe oben -> output/players/<slug>/scout_<slug>.html
 
-Stufe 2 - chess-opponent-briefing-medium (eine Farbe, Engine fuer die juengsten Partien, Zeitgrenze):
-  python briefing.py brief "<FIDE-ID | Name | Profil-Link>" --color white|black [--games 20] [--budget 300]
-      -> output/players/<slug>/medium_als-weiss/ (dossier.json, brief.md) + output/players/<slug>/briefing_<slug>_als-weiss.html;
-      danach briefing.json schreiben, validate/render mit <slug>/medium_als-weiss
+Stufe 2 - chess-opponent-briefing-medium (eine Farbe oder beide, Engine fuer die juengsten Partien, Zeitgrenze):
+  python briefing.py brief "<FIDE-ID | Name | Profil-Link>" --color white|black|both [--games 20] [--budget 300]
+      -> output/players/<slug>/briefing_ich-weiss/ (dossier.json, dossier.md) + briefing_<slug>_ich-weiss.html;
+      beide Farben ohne Zusatz: briefing/ + briefing_<slug>.html. Danach matchplan.json schreiben,
+      validate/render mit <slug>/briefing_ich-weiss bzw. <slug>/briefing
 
 Mannschaft - chess-opponent-team-prep (ruft je Spieler eine der drei Stufen auf):
-  python briefing.py team "<Ligaserver-Mannschaftsseite | team.json | Spieler ...>" --stage scout|medium|research
+  python briefing.py team "<Ligaserver-Mannschaftsseite | team.json | Spieler ...>" --stage scout|briefing|research
       [--boards 101-108] [--color white|black|both | --board1 white|black]
       -> output/teams/<mannschaft>/team_<mannschaft>_<stufe>.html (Spieler oben umschaltbar)
   python briefing.py team-render <mannschaft> --stage ...   Mannschaftsseite nach neuen Matchplaenen neu bauen
@@ -30,15 +31,15 @@ ChessBase-Partien (alle Stufen):
 
 Stufe 3 - chess-opponent-research-deep (volle Recherche):
   python briefing.py prepare "<FIDE-ID | Name | Profil-Link>" [...] [--fide-id N] [--fed GER] [--depth 18]
-      Identifizieren, Partien sammeln, Stockfish, Kennzahlen, Online-Accounts -> output/players/<slug>/dossier.json + brief.md
+      Identifizieren, Partien sammeln, Stockfish, Kennzahlen, Online-Accounts -> output/players/<slug>/research/ (dossier.json, dossier.md)
   python briefing.py line <slug> "1.e4 c5 2.d4 ..." --scope white|black|all
       Theorie-Linie mit Stockfish pruefen und als Beleg E<n> ablegen
   python briefing.py profile <slug> [...]
       nur das Spielerprofil neu rechnen (aus dem Cache, z. B. nach calibrate)
-  python briefing.py validate <slug>[/medium_als-weiss] [--remap] [--restamp]
-      output/players/<slug>/briefing.json pruefen (Perspektive, Belege, Online/Turnier-Trennung, geaenderte Belege)
-  python briefing.py render <slug>[/scout | /medium_als-weiss] [...] [--no-me]
-      output/players/<slug>/briefing_<slug>.html erzeugen;
+  python briefing.py validate <slug>[/briefing | /briefing_ich-weiss] [--remap] [--restamp]
+      matchplan.json pruefen (<slug> allein = research-deep) (Perspektive, Belege, Online/Turnier-Trennung, geaenderte Belege)
+  python briefing.py render <slug>[/scout | /briefing | /briefing_ich-weiss] [...] [--no-me]
+      output/players/<slug>/research_<slug>.html erzeugen;
       --no-me: ohne Zielkorridor aus me.json (zum Weitergeben)
 
 Pflege und Weitergabe:
@@ -46,6 +47,8 @@ Pflege und Weitergabe:
       Vergleichskurven fuer das Spielerprofil (Lichess-Uebertragungen, einmalig, ca. 1 Stunde) -> data/elo_curves.json
   python briefing.py course-add "<Suche>" --family "e4 c5 d4 cxd4 c3" --color white [--id N] [--decision "..."]
   python briefing.py pack         Zip ohne private Daten nach dist/
+  python briefing.py migrate      alte Datei- und Ordnernamen (vor 1.1) umstellen und Reports neu rendern
+  (prep.py ist ein gleichwertiger Kurzname fuer briefing.py)
 """
 from __future__ import annotations
 
@@ -86,21 +89,22 @@ def main(argv=None) -> int:
             q.add_argument("--workers", type=int)
     tm = sub.add_parser("team", help="Skill chess-opponent-team-prep: ganze Mannschaft mit einer Stufe vorbereiten")
     tm.add_argument("sources", nargs="+", help="Ligaserver-Mannschaftsseite, team.json oder mehrere Spieler-Eingaben")
-    tm.add_argument("--stage", required=True, choices=["scout", "medium", "research"])
+    tm.add_argument("--stage", required=True, choices=["scout", "briefing", "research", "medium"],
+                    help="medium = alter Name von briefing")
     g = tm.add_mutually_exclusive_group()
     g.add_argument("--color", choices=["white", "black", "both"], help="DEINE Farbe an allen Brettern (Standard: both)")
     g.add_argument("--board1", choices=["white", "black"], help="DEINE Farbe am ersten gewählten Brett, danach abwechselnd")
     tm.add_argument("--boards", help="Spielernummern bzw. Bretter, z. B. 101-108 oder 1-8 oder 3,5,7")
     tm.add_argument("--team", default="", help="Mannschaftsname (überschreibt den erkannten)")
-    tm.add_argument("--budget", type=float, help="Zeitgrenze je Spieler in Sekunden (scout 90, medium 300)")
-    tm.add_argument("--games", type=int, default=20, help="medium: analysierte Partien je Spieler (beide Farben: je die Hälfte)")
+    tm.add_argument("--budget", type=float, help="Zeitgrenze je Spieler in Sekunden (scout 90, briefing 300)")
+    tm.add_argument("--games", type=int, default=20, help="briefing: analysierte Partien je Spieler (beide Farben: je die Hälfte)")
     rc = sub.add_parser("receive", help="ChessBase-PGN aus dem Browser entgegennehmen (ohne Download-Dialog)")
     rc.add_argument("input")
     rc.add_argument("--fide-id", type=int)
     rc.add_argument("--timeout", type=float, default=180)
     tr = sub.add_parser("team-render", help="Mannschaftsseite neu bauen (nach neuen Matchplänen)")
     tr.add_argument("team", help="Ordnername unter output/teams/")
-    tr.add_argument("--stage", required=True, choices=["scout", "medium", "research"])
+    tr.add_argument("--stage", required=True, choices=["scout", "briefing", "research", "medium"])
     ln = sub.add_parser("line", help="Zugfolge mit Stockfish pruefen -> Beleg E<n>")
     ln.add_argument("slug")
     ln.add_argument("moves")
@@ -128,6 +132,7 @@ def main(argv=None) -> int:
     sub.add_parser("doctor", help="Umgebung pruefen")
     sub.add_parser("selftest", help="Offline-Tests")
     sub.add_parser("pack", help="Zip zum Weitergeben nach dist/")
+    sub.add_parser("migrate", help="alte Datei- und Ordnernamen umstellen, Reports neu rendern")
     cal = sub.add_parser("calibrate", help="Vergleichskurven fuer das Spielerprofil")
     cal.add_argument("--discover", action="store_true", help="Turnierliste aus den Uebertragungen der Gegner ergaenzen")
     cal.add_argument("--sides", type=int, help="Spielerseiten je Elo-Band (Standard 120)")
@@ -144,6 +149,9 @@ def main(argv=None) -> int:
         suite = unittest.defaultTestLoader.discover("tests", top_level_dir=".")
         return 0 if unittest.TextTestRunner(verbosity=1).run(suite).wasSuccessful() else 1
 
+    if a.cmd == "migrate":
+        from chess_briefing import paths
+        return paths.migrate_all()
     if a.cmd == "calibrate":
         from chess_briefing import calibrate
         return calibrate.run(a.sides, a.discover, a.workers)

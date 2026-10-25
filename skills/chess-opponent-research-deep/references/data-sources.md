@@ -39,7 +39,7 @@ curl/python-requests ab, akzeptieren aber diese Kennung. Alle Antworten werden g
 ## Verdeckte Account-Hinweise (SnoopChess u. Ä.)
 Kommerzielle Dienste wie SnoopChess (Login, Premium, keine öffentliche API) werden nicht abgefragt. Was der Nutzer dort
 sieht, trägt er von Hand ein: Partien als PGN in die Inbox (siehe oben), verdeckte Account-Namen als Muster in
-`research.json`:
+`research/accounts.json`:
 ```json
 {"username_patterns": {"lichess": ["?b?u???"]}}
 ```

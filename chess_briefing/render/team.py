@@ -9,10 +9,11 @@ import gzip
 import json
 from pathlib import Path
 
+from .. import paths as P
 from ..lineup import team_slug
 from .html import A, e, icon, stat
 
-STAGE_DE = {"scout": "Steckbrief (scout-fast)", "medium": "Briefing (briefing-medium)", "research": "Recherche (research-deep)"}
+STAGE_DE = {"scout": "Steckbrief (scout-fast)", "briefing": "Briefing (briefing-medium)", "research": "Recherche (research-deep)"}
 COLOR_DE = {"white": "du hast Weiß", "black": "du hast Schwarz", "both": "beide Farben"}
 
 TEAM_CSS = """
@@ -138,6 +139,7 @@ def overview(doc: dict, rows: list[dict]) -> str:
 
 def render_team(tdir: Path, doc: dict) -> Path:
     from ..modes.team import report_path
+    doc = dict(doc, stage=P.stage(doc["stage"]))     # alte Mannschaftsdaten: stage "medium"
     rows = []
     for p in doc["players"]:
         path = report_path(p["slug"], doc["stage"], p["color"]) if p.get("slug") else None

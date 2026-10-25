@@ -111,7 +111,7 @@ def name_variants(first: str, last: str, birth_year: int | None) -> list[str]:
 def lichess_find_teams(club: str, extra: list[str]) -> list[dict]:
     toks = [t for t in re.split(r"[\s/\-.,()]+", strip_accents(club).lower())
             if len(t) > 2 and not t.isdigit() and t not in _ABBR and t not in {"schach", "verein", "club", "e", "v"}]
-    teams = {t: {"id": t, "name": t, "via": "research.json"} for t in extra}
+    teams = {t: {"id": t, "name": t, "via": "accounts.json"} for t in extra}
     for tok in toks:
         d = _json(fetch(f"{LI}/api/team/search?text={tok}", ttl_hours=168)) or {}
         for t in d.get("currentPageResults", []):

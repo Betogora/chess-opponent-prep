@@ -72,6 +72,74 @@ class Engine(unittest.TestCase):
         pos[2] = {"cp": 0, "mate": None, "wdl": (0, 1000, 0), "best": None, "pv": []}    # ... und setzt patt
         self.assertEqual(engine.suspects(pos), [1])        # Endstellung braucht keine Engine
 
+    def test_deep_runs_warm_in_the_same_job(self):
+        class Fake:      # Schein-Engine: nach 2... Sc6 (Stellung 4) steht Weiss vorab +3, sonst ausgeglichen
+            def __init__(self):
+                self.calls = []
+
+            def analyse(self, board, limit, game=None, multipv=None):
+                self.calls.append((board.ply(), limit.depth, game))
+                cp = 300 if board.ply() == 4 and limit.depth == 14 else 0
+                return {"score": chess.engine.PovScore(chess.engine.Cp(cp), chess.WHITE),
+                        "pv": [next(iter(board.legal_moves))], "depth": limit.depth}
+        import chess.engine
+        ucis = ["e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "g8f6"]
+        eng = Fake()
+        base, deep = engine._run_job(eng, ("g:base:0", ucis, [0, 1, 2, 3, 4, 6], 14, 1,
+                                           (18, (0, 6), {5: {"cp": 300, "mate": None, "wdl": [950, 50, 0],
+                                                             "depth": 14}}, set())), None, 0)
+        self.assertEqual(sorted(base), [0, 1, 2, 3, 4, 6])          # Stellung 5 kam aus dem Cache
+        self.assertEqual(sorted(deep), [3, 4])                      # 2... Sc6 verliert -> beide Stellungen tief
+        self.assertEqual({g for _, _, g in eng.calls}, {"g:base:0"})   # ein Spielschluessel -> kein ucinewgame
+        self.assertEqual([(p, d) for p, d, _ in eng.calls if d == 18], [(3, 18), (4, 18)])
+        eng.calls.clear()
+        _, deep = engine._run_job(eng, ("g:base:0", ucis, [0, 1, 2, 3, 4, 6], 14, 1,
+                                        (18, (0, 6), {5: {"cp": 300, "mate": None, "wdl": [950, 50, 0], "depth": 14}},
+                                         {4})), None, 0)
+        self.assertEqual(sorted(deep), [3])                         # Stellung 4 hat schon einen Tiefe-18-Treffer
+
+    def test_legacy_cache_keys_move_to_the_engine_version(self):
+        import sqlite3
+        from unittest import mock
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp, \
+                mock.patch.object(config, "CACHE_DIR", Path(tmp)):      # Windows haelt die SQLite-Datei kurz fest
+            db = sqlite3.connect(Path(tmp) / "positions.sqlite")
+            db.execute("CREATE TABLE pos (k TEXT PRIMARY KEY, v TEXT)")
+            db.executemany("INSERT INTO pos VALUES (?, ?)", [("sf.exe|d14|m1|8/8 w - - 0", '{"cp": 1}'),
+                                                             ("sf.exe2|d14|m1|8/8 w - - 0", '{"cp": 2}')])
+            db.commit()
+            db.close()
+            pc = engine.PositionCache("Stockfish 19", legacy="sf.exe")
+            self.assertEqual(pc.get({0: "8/8 w - - 0 1"}, 14, 1), {0: {"cp": 1}})
+            keys = sorted(k for (k,) in pc.db.execute("SELECT k FROM pos"))
+            pc.close()
+        self.assertEqual(keys, ["Stockfish 19|d14|m1|8/8 w - - 0", "sf.exe2|d14|m1|8/8 w - - 0"])   # fremder Name bleibt
+
+
+class Setup(unittest.TestCase):
+    def test_stockfish_archive_for_every_system(self):
+        from chess_briefing.maintenance import _asset_score
+        sf19 = ["stockfish-android-arm64-universal.tar.gz", "stockfish-linux-arm64-universal.tar.gz",
+                "stockfish-linux-riscv64-universal.tar.gz", "stockfish-linux-x86-64-universal.tar.gz",
+                "stockfish-macos-universal.tar.gz", "stockfish-windows-arm64-universal.zip",
+                "stockfish-windows-x86-64-universal.zip"]
+        sf17 = ["stockfish-ubuntu-x86-64-avx2.tar", "stockfish-ubuntu-x86-64.tar", "stockfish-macos-m1-apple-silicon.tar",
+                "stockfish-macos-x86-64-avx2.tar", "stockfish-windows-x86-64-avx2.zip", "stockfish-windows-x86-64.zip",
+                "stockfish-android-armv8.tar"]
+
+        def pick(names, sysname, machine):
+            best = max(names, key=lambda n: _asset_score(n, sysname, machine))
+            return best if _asset_score(best, sysname, machine) >= 0 else None
+        for sysname, machine, want19, want17 in (
+                ("Windows", "AMD64", "stockfish-windows-x86-64-universal.zip", "stockfish-windows-x86-64-avx2.zip"),
+                ("Windows", "ARM64", "stockfish-windows-arm64-universal.zip", None),
+                ("Linux", "x86_64", "stockfish-linux-x86-64-universal.tar.gz", "stockfish-ubuntu-x86-64-avx2.tar"),
+                ("Linux", "aarch64", "stockfish-linux-arm64-universal.tar.gz", None),
+                ("Darwin", "arm64", "stockfish-macos-universal.tar.gz", "stockfish-macos-m1-apple-silicon.tar"),
+                ("Darwin", "x86_64", "stockfish-macos-universal.tar.gz", "stockfish-macos-x86-64-avx2.tar")):
+            self.assertEqual(pick(sf19, sysname, machine), want19, (sysname, machine))
+            self.assertEqual(pick(sf17, sysname, machine), want17, (sysname, machine))
+
 
 def _dossier(online=True):
     facts = [{"id": "F1", "text": "Mit Schwarz 7 Partien.", "scope": "black"},
@@ -147,12 +215,14 @@ class EvidenceSnapshot(unittest.TestCase):
                 pdir = Path(tmp) / "x"
                 pdir.mkdir()
                 (pdir / "dossier.json").write_text(json.dumps(_dossier(online=False)), encoding="utf-8")
-                (pdir / "briefing.json").write_text(json.dumps(_briefing()), encoding="utf-8")
-                self.assertEqual(pipeline.validate("x"), 0)                       # stempelt
-                self.assertIn("_evidence_snapshot", json.loads((pdir / "briefing.json").read_text(encoding="utf-8")))
+                (pdir / "briefing.json").write_text(json.dumps(_briefing()), encoding="utf-8")   # alte Ablage (vor 1.1)
+                self.assertEqual(pipeline.validate("x"), 0)                       # stellt um und stempelt
+                rdir = pdir / "research"
+                self.assertIn("_evidence_snapshot", json.loads((rdir / "matchplan.json").read_text(encoding="utf-8")))
+                self.assertFalse((pdir / "briefing.json").exists())
                 d = _dossier(online=False)
                 d["facts"][0]["text"] = "Mit Schwarz 9 Partien."                  # neuer Lauf, anderer Inhalt
-                (pdir / "dossier.json").write_text(json.dumps(d), encoding="utf-8")
+                (rdir / "dossier.json").write_text(json.dumps(d), encoding="utf-8")
                 self.assertEqual(pipeline.validate("x"), 1)
             finally:
                 config.PLAYERS_DIR = old

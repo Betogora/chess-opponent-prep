@@ -19,23 +19,29 @@ REQUIRED = ("chess", "requests", "bs4")
 
 
 # ---------------------------------------------------------------- setup
-def _asset_score(name: str) -> int:
-    """Passendes Stockfish-Archiv fuer dieses System waehlen (hoeher = besser)."""
+def _asset_score(name: str, sysname: str | None = None, machine: str | None = None) -> int:
+    """Passendes Stockfish-Archiv fuer dieses System waehlen (hoeher = besser, -1 = passt nicht).
+    Ab Stockfish 19: je System ein "universal"-Archiv (linux-x86-64-universal, macos-universal, ...), das zur Laufzeit
+    den besten Befehlssatz waehlt. Aeltere Releases: ubuntu-/macos-m1-apple-silicon-/windows-x86-64-avx2-Archive."""
     n = name.lower()
-    sysname = platform.system().lower()
-    machine = platform.machine().lower()
-    want = {"windows": "windows", "linux": "ubuntu", "darwin": "macos"}.get(sysname, sysname)
-    if want not in n:
+    sysname = (sysname or platform.system()).lower()
+    machine = (machine or platform.machine()).lower()
+    os_keys = {"windows": ("windows",), "linux": ("linux", "ubuntu"), "darwin": ("macos",)}.get(sysname, (sysname,))
+    if "android" in n or not any(k in n for k in os_keys):
         return -1
+    arm = "arm" in machine or "aarch64" in machine
     if sysname == "darwin":
-        arm = machine in ("arm64", "aarch64")
+        if "universal" in n:            # ein Archiv fuer Intel und Apple Silicon
+            return 4
         return 3 if (arm and ("apple-silicon" in n or "m1" in n)) or (not arm and "x86-64" in n) else -1
-    if "arm" in machine or "aarch64" in machine:
-        return 2 if ("arm" in n or "aarch64" in n) else -1
-    for score, key in ((4, "avx2"), (3, "universal"), (2, "bmi2"), (1, "x86-64")):
-        if key in n and "arm" not in n:
+    if arm:
+        return (4 if "universal" in n else 2) if ("arm" in n or "aarch64" in n) else -1
+    if "x86-64" not in n:               # schliesst arm64-, riscv64- und andere Archive aus
+        return -1
+    for score, key in ((4, "universal"), (3, "avx2"), (2, "bmi2")):
+        if key in n:
             return score
-    return -1
+    return 1
 
 
 def setup(force: bool = False) -> int:
@@ -133,7 +139,7 @@ def doctor(quiet: bool = False, need_engine: bool = True) -> int:
 
 
 # ---------------------------------------------------------------- pack
-INCLUDE = ["briefing.py", "requirements.txt", "README.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md", ".env.example",
+INCLUDE = ["briefing.py", "prep.py", "requirements.txt", "README.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md", ".env.example",
            "chess_briefing", "skills", "tests", ".claude/skills"]
 EXCLUDE_PARTS = {"__pycache__", ".pytest_cache"}
 

@@ -57,7 +57,33 @@ class BothColors(unittest.TestCase):
     def test_opponent_colors(self):
         self.assertEqual(C.opponent_colors("white"), ["black"])
         self.assertEqual(C.opponent_colors("both"), ["white", "black"])
-        self.assertEqual(C.output_dir(Path("p"), "medium", "both").name, "medium_beide")
+
+    def test_report_names_follow_the_stage(self):
+        from chess_briefing.modes.team import report_path
+        names = {s: report_path("muster_max", s, "both").name for s in ("scout", "briefing", "research")}
+        self.assertEqual(names, {"scout": "scout_muster_max.html", "briefing": "briefing_muster_max.html",
+                                 "research": "research_muster_max.html"})
+        self.assertEqual(report_path("muster_max", "medium", "white").name, "briefing_muster_max_ich-weiss.html")
+        self.assertEqual(report_path("muster_max", "scout", "black").name, "scout_muster_max.html")   # zeigt beide
+
+    def test_old_names_are_migrated(self):
+        from chess_briefing import paths as P
+        with tempfile.TemporaryDirectory() as tmp:
+            old = config.PLAYERS_DIR
+            config.PLAYERS_DIR = Path(tmp)
+            try:
+                pdir = Path(tmp) / "muster_max"
+                (pdir / "medium_als-weiss").mkdir(parents=True)
+                (pdir / "medium_als-weiss" / "briefing.json").write_text("{}", encoding="utf-8")
+                (pdir / "dossier.json").write_text("{}", encoding="utf-8")
+                (pdir / "research.json").write_text("{}", encoding="utf-8")
+                self.assertEqual(P.data_dir("muster_max/medium_als-weiss"), pdir / "briefing_ich-weiss")
+                self.assertTrue((pdir / "briefing_ich-weiss" / "matchplan.json").exists())
+                self.assertTrue((pdir / "research" / "dossier.json").exists())
+                self.assertTrue((pdir / "research" / "accounts.json").exists())
+                self.assertEqual(P.data_dir("muster_max"), pdir / "research")
+            finally:
+                config.PLAYERS_DIR = old
 
     def test_scout_both_colors_has_both_repertoires(self):
         d, _ = S.build_scout(morphy(), TS.Scout.games(None), [], {}, [], None)

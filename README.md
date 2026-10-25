@@ -51,7 +51,7 @@ Ordner in Claude Code, Codex oder Gemini CLI öffnen und schreiben – der Agent
 python briefing.py scout   "<FIDE-ID | Name | Link>" --color white|black|both
 python briefing.py brief   "<FIDE-ID | Name | Link>" --color white|black|both     # danach Matchplan schreiben
 python briefing.py prepare "<FIDE-ID | Name | Link>"                               # research-deep
-python briefing.py team    "<Mannschaftsseite | team.json | Spieler …>" --stage scout|medium|research --boards 101-108
+python briefing.py team    "<Mannschaftsseite | team.json | Spieler …>" --stage scout|briefing|research --boards 101-108
 ```
 
 - `--color` ist immer **deine** Farbe; `both` betrachtet beide.
@@ -65,7 +65,8 @@ python briefing.py team    "<Mannschaftsseite | team.json | Spieler …>" --stag
 
 ```
 output/
-├── players/<slug>/   scout_<slug>.html · briefing_<slug>_beide.html · briefing_<slug>.html · Daten, inbox/
+├── players/<slug>/   scout_<slug>.html · briefing_<slug>[_ich-weiss|_ich-schwarz].html · research_<slug>.html
+│                     Daten je Stufe in scout/ · briefing[_ich-weiss]/ · research/ · gemeinsam inbox/, analysis/
 └── teams/<team>/     team_<team>_<stufe>.html
 ```
 

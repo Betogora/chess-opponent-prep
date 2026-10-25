@@ -10,6 +10,7 @@ Ablauf je Partie (drei Durchgaenge, jeder Abschnitt mit leerem Hash -> Ergebnis 
   1. Vorab: alle Stellungen in ENGINE_SHALLOW_DEPTH.
   2. Nachrechnen: nur verdaechtige Zuege (umkaempfte Stellung, Verlust > TRIAGE_LOSS) beide Stellungen in ENGINE_DEPTH.
      Gemessen an 8 Partien: findet alle Fehler/Patzer der vollen Tiefe-18-Analyse bei rund einem Drittel der Zeit.
+     Liegen beide Stellungen im selben Abschnitt, rechnet der Vorab-Auftrag sie gleich danach mit warmem Hash nach.
   3. Zweitbester Zug: Stellungen, in denen der Spieler am Zug ist, MultiPV 2 in ENGINE_ALT_DEPTH ("alt").
 """
 from __future__ import annotations
@@ -166,14 +167,20 @@ def _alt(infos, board: chess.Board, depth: int) -> dict:
     return out
 
 
-def _run_job(eng: chess.engine.SimpleEngine, job: tuple, slot_dir: Path | None, slots: int) -> dict:
-    """Ein Abschnitt: Stellungen `indices` einer Partie in fester Tiefe, frischer Hash (ucinewgame)."""
-    key, ucis, indices, depth, multipv = job
+def _run_job(eng: chess.engine.SimpleEngine, job: tuple, slot_dir: Path | None, slots: int) -> tuple[dict, dict]:
+    """Ein Abschnitt: Stellungen `indices` einer Partie in fester Tiefe, frischer Hash (ucinewgame).
+    deep = (Tiefe, (erste, letzte Stellung des Abschnitts), bekannte Vorab-Ergebnisse, Stellungen mit Cache-Treffer):
+    verdaechtige Zuege, deren beide Stellungen im Abschnitt liegen, gleich danach mit demselben, warmen Hash nachrechnen
+    (gemessen 16 % schneller als mit leerem Hash). Rueckgabe: Vorab-Ergebnisse, Nachrechnung."""
+    key, ucis, indices, depth, multipv, deep = job
     want, last = set(indices), max(indices)
-    out = {}
+    span = deep[1] if deep else (0, -1)
+    out, boards, deep_out = {}, {}, {}
     with _slot(slot_dir, slots):
         board = chess.Board()
-        for i in range(last + 1):
+        for i in range(max(last, span[1]) + 1):
+            if span[0] <= i <= span[1]:
+                boards[i] = board.copy(stack=False)
             if i in want:
                 t = _terminal(board)
                 if multipv == 1:
@@ -181,9 +188,17 @@ def _run_job(eng: chess.engine.SimpleEngine, job: tuple, slot_dir: Path | None, 
                 elif t is None and board.legal_moves:
                     infos = eng.analyse(board, chess.engine.Limit(depth=depth), game=key, multipv=multipv)
                     out[i] = _alt(infos, board, depth)
-            if i < last:
+            if i < max(last, span[1]):
                 board.push(chess.Move.from_uci(ucis[i]))
-    return out
+        if deep:
+            deep_depth, (lo, hi), known, skip = deep
+            full = [out.get(i) or known.get(i) for i in range(lo, hi + 1)]
+            if all(full):
+                for i in (lo + k for k in suspects(full)):   # lo ist gerade -> Weiss am Zug wie in suspects()
+                    if i not in skip:
+                        deep_out[i] = _position(eng.analyse(boards[i], chess.engine.Limit(depth=deep_depth), game=key),
+                                                boards[i])
+    return out, deep_out
 
 
 def _engine_thread(engine_path: str, jobs: queue.Queue, done: queue.Queue, slot_dir: Path | None, slots: int) -> None:
@@ -231,11 +246,49 @@ def suspects(pos: list[dict]) -> list[int]:
     return sorted(i for i in idx if pos[i].get("depth") is not None)   # Endstellungen brauchen keine Engine
 
 
-class PositionCache:
-    """Stellungs-Cache ueber Partien und Spieler (SQLite, nur der Hauptthread schreibt). Schluessel: Engine, Tiefe,
-    MultiPV und FEN ohne Zugnummer. Wiederkehrende Eroeffnungsstellungen und Neulaeufe kosten so keine Engine-Zeit."""
+_ids: dict[str, str] = {}
+_ids_lock = threading.Lock()
 
-    def __init__(self, engine_name: str):
+
+def engine_id(path: Path | None = None) -> str:
+    """UCI-Name der Engine ("Stockfish 19"), je Binary (Pfad, Groesse, Zeitstempel) in cache/engine_id.json gemerkt.
+    Schluessel fuer Stellungs- und Partie-Cache: ein neues Binary unter gleichem Dateinamen bekommt so nie die
+    Bewertungen des alten. Nur beim ersten Aufruf je Binary startet ein Engine-Prozess."""
+    path = path or config.find_engine()
+    if not path:
+        return "Stockfish"
+    st = path.stat()
+    key = f"{path.resolve()}|{st.st_size}|{int(st.st_mtime)}"
+    f = config.CACHE_DIR / "engine_id.json"
+    with _ids_lock:
+        if key in _ids:
+            return _ids[key]
+        try:
+            known = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            known = {}
+        if key not in known:
+            eng = chess.engine.SimpleEngine.popen_uci(str(path))
+            try:
+                known[key] = eng.id.get("name", path.name)
+            finally:
+                eng.quit()
+            try:
+                f.parent.mkdir(parents=True, exist_ok=True)
+                f.write_text(json.dumps(known, ensure_ascii=False, indent=1), encoding="utf-8")
+            except OSError:
+                pass   # nur die Merkliste; naechstes Mal wird die Engine erneut gefragt
+        _ids[key] = known[key]
+        return known[key]
+
+
+class PositionCache:
+    """Stellungs-Cache ueber Partien und Spieler (SQLite, nur der Hauptthread schreibt). Schluessel: Engine-Version,
+    Tiefe, MultiPV und FEN ohne Zugnummer. Wiederkehrende Eroeffnungsstellungen und Neulaeufe kosten so keine Engine-Zeit.
+    legacy: frueherer Schluessel (Dateiname des Binarys statt Version); solche Eintraege stammen aus der Zeit vor der
+    Versionskennung, wurden mit dem damals installierten Binary gerechnet und werden einmalig auf die Version umgestellt."""
+
+    def __init__(self, engine_name: str, legacy: str | None = None):
         import sqlite3
         self.name = engine_name
         self.db = None
@@ -245,6 +298,11 @@ class PositionCache:
             self.db = sqlite3.connect(config.CACHE_DIR / "positions.sqlite", timeout=30)
             self.db.execute("PRAGMA journal_mode=WAL")
             self.db.execute("CREATE TABLE IF NOT EXISTS pos (k TEXT PRIMARY KEY, v TEXT)")
+            if legacy and legacy != engine_name:
+                old = f"{legacy}|"
+                self.db.execute("UPDATE OR IGNORE pos SET k = ? || substr(k, ?) WHERE k >= ? AND k < ?",
+                                (f"{engine_name}|", len(old) + 1, old, f"{legacy}}}"))
+                self.db.commit()
         except Exception as ex:  # noqa: BLE001 - reine Beschleunigung; ohne Cache laeuft alles wie zuvor
             log(f"  ! Stellungs-Cache nicht verfuegbar: {ex}")
             self.db = None
@@ -316,11 +374,17 @@ def analyse_games(games: list[dict], cache_dir: Path, depth: int | None = None,
     engine = config.find_engine()
     if not engine:
         raise SystemExit("Stockfish nicht gefunden (tools/stockfish, BRIEFING_ENGINE oder PATH).")
+    eid = engine_id(engine)
     cache_dir.mkdir(parents=True, exist_ok=True)
     results, todo = {}, {}
     for g in games:
         f = cache_dir / f"{g['id']}.json"
         d = json.loads(f.read_text(encoding="utf-8")) if f.exists() and not force else {}
+        if d and d.get("engine") == engine.name != eid:
+            d["engine"] = eid      # Dateiname statt Version: aus der Zeit vor der Versionskennung (siehe PositionCache)
+            f.write_text(json.dumps(d), encoding="utf-8")
+        if d.get("engine") != eid:
+            d = {}                 # andere Engine-Version -> neu rechnen
         base_ok = d.get("depth", 0) >= depth and len(d.get("positions", [])) == len(g["ucis"]) + 1
         if base_ok and d.get("alt_depth", 0) >= alt_depth:
             results[g["id"]] = d["positions"]
@@ -330,10 +394,10 @@ def analyse_games(games: list[dict], cache_dir: Path, depth: int | None = None,
     if not todo:
         return results
 
-    pcache = PositionCache(engine.name)
+    pcache = PositionCache(eid, legacy=engine.name)
     n_new = sum(1 for st in todo.values() if st["cache"] is None)
     plan = f"Tiefe {shallow}, verdächtige Züge {depth}" if depth > shallow else f"Tiefe {depth}"
-    log(f"  Stockfish ({engine.name}, {plan}, zweitbester Zug Tiefe {alt_depth} wo das Profil ihn nutzt, "
+    log(f"  {eid} ({plan}, zweitbester Zug Tiefe {alt_depth} wo das Profil ihn nutzt, "
         f"{workers} Prozesse): {n_new} Partien neu, {len(todo) - n_new} nur zweitbester Zug")
     t0, done0 = time.time(), len(results)
 
@@ -364,7 +428,7 @@ def analyse_games(games: list[dict], cache_dir: Path, depth: int | None = None,
         results[gid] = pos
         (cache_dir / f"{gid}.json").write_text(json.dumps(
             {"depth": depth, "shallow_depth": st["cache"].get("shallow_depth", depth) if st["cache"] else shallow,
-             "alt_depth": alt_depth, "alt_scope": "profil", "engine": engine.name, "positions": pos}), encoding="utf-8")
+             "alt_depth": alt_depth, "alt_scope": "profil", "engine": eid, "positions": pos}), encoding="utf-8")
         new = len(results) - done0
         el = time.time() - t0
         rest = el / new * (len(games) - len(results)) if new else 0
@@ -377,20 +441,26 @@ def analyse_games(games: list[dict], cache_dir: Path, depth: int | None = None,
     seq = itertools.count()
     open_jobs = 0
 
-    def submit(kind, gid, idx, dep, mpv):
+    def submit(kind, gid, idx, dep, mpv, deep=None):
         nonlocal open_jobs
         todo[gid]["left"] += 1
         open_jobs += 1
         jobq.put(((1 if kind == "base" else 0, order[gid]), next(seq),
-                  ((kind, gid), (f"{gid}:{kind}:{idx[0]}", todo[gid]["g"]["ucis"], idx, dep, mpv))))
+                  ((kind, gid), (f"{gid}:{kind}:{idx[0]}", todo[gid]["g"]["ucis"], idx, dep, mpv, deep))))
 
     def stage(gid, kind, idx, dep, mpv):
         st = todo[gid]
         fl = fens(st)
         hit = pcache.get({i: fl[i] for i in idx}, dep, mpv)
         st[kind].update(hit)
+        # Vorab-Rechnung: Nachrechnung im selben Auftrag (warmer Hash); Stellungen mit Tiefe-depth-Treffer auslassen
+        warm = kind == "base" and depth > dep
+        deep_hit = set(pcache.get({i: fl[i] for i in idx}, depth, 1)) if warm else set()
         for c in chunks([i for i in idx if i not in hit], size):
-            submit(kind, gid, c, dep, mpv)
+            lo = c[0] // size * size
+            span = (lo, min(lo + size, len(fl)) - 1)
+            submit(kind, gid, c, dep, mpv, (depth, span, {i: hit[i] for i in range(span[0], span[1] + 1) if i in hit},
+                                            deep_hit) if warm else None)
 
     def advance(gid):
         """Naechste Stufe einer Partie, sobald die laufende keine offenen Auftraege mehr hat."""
@@ -404,7 +474,10 @@ def analyse_games(games: list[dict], cache_dir: Path, depth: int | None = None,
             elif st["stage"] == "base":
                 st["stage"] = "deep"
                 if st["cache"] is None and depth > shallow:
-                    stage(gid, "deep", suspects([st["base"][i] for i in range(n)]), depth, 1)
+                    # warm im Vorab-Auftrag gerechnet sind schon alle Paare innerhalb eines Abschnitts; hier bleiben
+                    # Paare ueber eine Abschnittsgrenze und Stellungen aus dem Stellungs-Cache
+                    stage(gid, "deep", [i for i in suspects([st["base"][i] for i in range(n)]) if i not in st["deep"]],
+                          depth, 1)
             elif st["stage"] == "deep":
                 st["stage"] = "alt"
                 stage(gid, "alt", alt_positions(g, current(st), alt_all), alt_depth, 2)
@@ -433,11 +506,15 @@ def analyse_games(games: list[dict], cache_dir: Path, depth: int | None = None,
             if err is not None:
                 raise RuntimeError(f"Stockfish-Analyse fehlgeschlagen: {type(err).__name__}: {err}") from err
             open_jobs -= 1
-            (kind, gid), (_, _, _, dep, mpv) = job
+            (kind, gid), (_, _, _, dep, mpv, _) = job
+            out, deep_out = out
             st = todo[gid]
             st["left"] -= 1
             st[kind].update(out)
             pcache.put(fens(st), out, dep, mpv)
+            if deep_out:
+                st["deep"].update(deep_out)
+                pcache.put(fens(st), deep_out, depth, 1)
             advance(gid)
     finally:
         while not jobq.empty():          # bei Abbruch offene Auftraege verwerfen
@@ -456,14 +533,7 @@ def analyse_games(games: list[dict], cache_dir: Path, depth: int | None = None,
 
 
 def engine_label() -> str:
-    e = config.find_engine()
-    if not e:
-        return "Stockfish"
-    eng = chess.engine.SimpleEngine.popen_uci(str(e))
-    try:
-        return eng.id.get("name", "Stockfish")
-    finally:
-        eng.quit()
+    return engine_id()
 
 
 def check_line(san_line: str, depth: int = 22, multipv: int = 3) -> dict:

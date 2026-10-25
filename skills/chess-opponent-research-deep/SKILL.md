@@ -1,7 +1,7 @@
 ---
 name: chess-opponent-research-deep
 description: "Volle Gegnerrecherche für Schach (Stufe 3 von 3, dauert 15–30 min). Aus FIDE-ID, Name oder Profil-Link (ChessBase, FIDE, Lichess, Chess.com) entsteht ein belegter Matchplan für beide Farben als offline-fähige HTML-Datei. Sammelt alle Quellen (ChessBase, Lichess-Übertragungen, chess-results, NSV), analysiert alle Partien mit Stockfish, sucht vermutliche Online-Accounts, gleicht Chessable-Kurse ab und zeigt ein Spielerprofil. Auslöser: „ausführliche Vorbereitung gegen …“, „Gegner gründlich analysieren“, „Recherche zu …“. Für schnell → chess-opponent-scout-fast, für eine Partie mit fester Farbe → chess-opponent-briefing-medium."
-version: 1.0.0
+version: 1.1.0
 ---
 
 # chess-opponent-research-deep
@@ -14,7 +14,7 @@ Dieser Skill ist modellunabhängig geschrieben (Claude, GPT/Codex, Gemini, …).
 Programm `briefing.py`; der Agent übernimmt nur drei klar umrissene Aufgaben: **Browser-Schritt** (falls nötig),
 **Account-Checkliste** und **Matchplan schreiben**. Deterministisch und reproduzierbar ist alles außer dem Text.
 
-Ergebnis je Gegner: `output/players/<slug>/briefing_<slug>.html` (eine Datei, offline, hell/dunkel, mobil).
+Ergebnis je Gegner: `output/players/<slug>/research_<slug>.html` (eine Datei, offline, hell/dunkel, mobil).
 
 ## 0. Voraussetzungen (einmalig)
 ```bash
@@ -34,10 +34,10 @@ ohne Schreibrechte, höchstens `team:read`): schaltet die Team-Mitgliederliste f
 | 0 | Eigenprofil (optional) | Agent | `output/players/<slug>/me.json`, wenn der Nutzer etwas über sich sagt |
 | 1 | `prepare` | Programm | „fertig: …dossier.json“ |
 | 2 | ChessBase-PGN holen | Agent mit Browser (oder Nutzer) | Datei in `output/players/<slug>/inbox/`, `prepare` erneut |
-| 3 | Account-Checkliste | Agent | Top-Kandidat bestätigt/abgelehnt in `research.json` oder bewusst offen gelassen |
+| 3 | Account-Checkliste | Agent | Top-Kandidat bestätigt/abgelehnt in `research/accounts.json` oder bewusst offen gelassen |
 | 3b | Datengrundlage prüfen | Agent | < 5 Turnierpartien und kein Account mit ≥ 20 Partien → Abbruch mit Meldung (kein Matchplan) |
-| 4 | Matchplan schreiben | Agent | `briefing.json` vorhanden |
-| 5 | `validate` + `render` | Programm | „✓ Briefing gültig“, HTML erzeugt |
+| 4 | Matchplan schreiben | Agent | `research/matchplan.json` vorhanden |
+| 5 | `validate` + `render` | Programm | „✓ Matchplan gültig“, HTML erzeugt |
 | 6 | Abschlussbericht | Agent | Nutzer kennt Pfad, Datenbasis, Unsicherheiten |
 
 ### 0. Eigenprofil (nur wenn der Nutzer etwas über sich sagt)
@@ -85,12 +85,12 @@ ChessBase lässt Skripte nicht durch (Bot-Prüfung). Die Pipeline umgeht das nic
 Ohne Browser-Werkzeug: den Nutzer bitten, die Profilseite zu öffnen, die PGN per Browser-Konsole oder
 „Speichern unter“ abzulegen. Die Pipeline läuft auch ohne ChessBase (dann mit weniger Partien).
 
-### 3. Account-Checkliste (nur Top-3 aus `brief.md` → „Online-Accounts“)
+### 3. Account-Checkliste (nur Top-3 aus `dossier.md` → „Online-Accounts“)
 Das Programm hat Kandidaten gefunden und per fester Formel bewertet (Verein, Eröffnungs-Fingerabdruck, Profil).
 Für jeden der drei besten Kandidaten:
-1. Profil-Link öffnen (`output/players/<slug>/online_accounts.json`). Passen Land/Ort, Aktivitätszeitraum, Spielstärke?
+1. Profil-Link öffnen (`output/players/<slug>/research/online_accounts.json`). Passen Land/Ort, Aktivitätszeitraum, Spielstärke?
 2. Klarer Widerspruch (anderer Realname, anderes Land, Rating völlig unplausibel) → ablehnen.
-3. Eintragen in `output/players/<slug>/research.json`, dann `prepare` erneut:
+3. Eintragen in `output/players/<slug>/research/accounts.json`, dann `prepare` erneut:
 ```json
 {"accounts": {"lichess:BeispielName": {"status": "bestätigt", "note": "Ort/Verein passen"}},
  "lichess_teams": [], "chesscom_clubs": [], "extra_candidates": {"lichess": [], "chesscom": []},
@@ -116,15 +116,15 @@ Nach Schritt 1–3 prüfen. Ein Matchplan wird **nicht** geschrieben, wenn
 - weniger als 5 Turnierpartien mit Zügen vorliegen **und**
 - kein übernommener Online-Account mindestens 20 Partien (ohne Bullet) liefert.
 
-Dann kein `briefing.json`, kein `render`. Stattdessen dem Nutzer kurz melden: gefundene Partien je Quelle,
+Dann kein `matchplan.json`, kein `render`. Stattdessen dem Nutzer kurz melden: gefundene Partien je Quelle,
 geprüfte Accounts mit Konfidenz und Grund der Ablehnung, was noch helfen würde (ChessBase-/SnoopChess-Partien in
-`inbox/`, Account-Hinweis in `research.json`). Ein „leerer“ Bericht ist ausdrücklich erlaubt und besser als ein
+`inbox/`, Account-Hinweis in `accounts.json`). Ein „leerer“ Bericht ist ausdrücklich erlaubt und besser als ein
 Matchplan aus ein, zwei Partien. Liefert der Nutzer nichts nach, ist der Gegner damit abgeschlossen.
 
 ### 4. Matchplan schreiben
-Lies `output/players/<slug>/brief.md` vollständig. Abschnitt „Spielerprofil“ → `profile_summary`; Abschnitt „Abgleich mit dir“
-(nur mit `me.json`) → Zielkorridor moderat in Plan und Reihenfolge der Karten einarbeiten. Schreibe `output/players/<slug>/briefing.json` nach
-[references/briefing-schema.md](references/briefing-schema.md) im Stil von [references/writing-guide.md](references/writing-guide.md).
+Lies `output/players/<slug>/research/dossier.md` vollständig. Abschnitt „Spielerprofil“ → `profile_summary`; Abschnitt „Abgleich mit dir“
+(nur mit `me.json`) → Zielkorridor moderat in Plan und Reihenfolge der Karten einarbeiten. Schreibe `output/players/<slug>/research/matchplan.json` nach
+[references/matchplan-schema.md](references/matchplan-schema.md) im Stil von [references/writing-guide.md](references/writing-guide.md).
 
 Arbeitsweise, die gute Pläne liefert:
 1. **Muster vor Einzelfällen:** Schlüsselstellungen (K…) mit ähnlicher Widerlegung zusammenfassen
@@ -146,7 +146,7 @@ Handlung + einen Satz Begründung mit Zahl und Stichprobe. Lieber weniger Bauste
 
 ### 5. Prüfen und rendern
 ```bash
-python briefing.py validate <slug>     # muss "✓ Briefing gültig" melden
+python briefing.py validate <slug>     # muss "✓ Matchplan gültig" melden
 python briefing.py render <slug>       # mehrere Slugs -> zusätzlich output/players/index.html
 python briefing.py render <slug> --no-me   # neutraler Report ohne Zielkorridor (zum Weitergeben)
 ```
@@ -170,7 +170,7 @@ vermuteter Online-Account mit Konfidenz · offene Punkte (CAPTCHA, fehlgeschlage
 ## Weiterführend
 | Datei | Inhalt |
 |---|---|
-| [references/briefing-schema.md](references/briefing-schema.md) | Felder von `briefing.json` |
+| [references/matchplan-schema.md](references/matchplan-schema.md) | Felder von `matchplan.json` |
 | [references/writing-guide.md](references/writing-guide.md) | Inhalt und Sprache des Matchplans |
 | [references/architecture.md](references/architecture.md) | Stufen, Module, Dateien, Erweiterungspunkte |
 | [references/data-sources.md](references/data-sources.md) | Endpunkte, Grenzen, Logins, Nutzungsbedingungen |

@@ -1,4 +1,4 @@
-"""Pruefung von briefing.json gegen dossier.json.
+"""Pruefung von matchplan.json gegen dossier.json.
 
 Fehler (blockierend): Pflichtfelder, unbekannte Beleg-IDs, Perspektivfehler, illegale Zugfolgen.
 Warnungen: Zahlen ohne Beleg, Floskeln, zu lange Saetze, Handlungen ohne Beleg.
@@ -99,7 +99,7 @@ def validate_briefing(b: dict | None, d: dict | None) -> tuple[list[str], list[s
     if not d:
         return ["dossier.json fehlt – zuerst prepare ausführen."], []
     if not b:
-        return ["briefing.json fehlt."], []
+        return ["matchplan.json fehlt."], []
     facts = {f["id"]: f for f in d["facts"]}
     fact_nums = _fact_numbers(d["facts"])
 

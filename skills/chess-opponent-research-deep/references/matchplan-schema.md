@@ -1,4 +1,4 @@
-# briefing.json – Schema
+# matchplan.json – Schema
 
 ```jsonc
 {
@@ -40,7 +40,7 @@
 }
 ```
 
-Beleg-IDs: `F…` aus `dossier.json`/`brief.md`, `E…` aus `python briefing.py line`, `O…` aus dem Online-Abschnitt,
+Beleg-IDs: `F…` aus `dossier.json`/`dossier.md`, `E…` aus `python briefing.py line`, `O…` aus dem Online-Abschnitt,
 `P…` Spielerprofil (farbunabhängig), `M…` Abgleich mit dem Eigenprofil (nur mit `me.json`; Annahmen des Nutzers).
 `K…` sind die Schlüsselstellungen; ihr Beleg ist das jeweils zugehörige `F…`.
 
@@ -53,4 +53,5 @@ Regeln, die `validate` erzwingt:
 ## Stufe briefing-medium
 Gleiches Schema, aber nur die Seite des Nutzers (`as_white` **oder** `as_black`, steht in `dossier.mode.sides`).
 Die andere Seite und `online`-Felder lehnt der Validator ab; 3 Plan-Schritte genügen (`mode.min_plan_steps`).
-Datei: `output/players/<slug>/medium_als-weiss/briefing.json` bzw. `medium_als-schwarz/`.
+Datei: `output/players/<slug>/briefing_ich-weiss/matchplan.json` bzw. `briefing_ich-schwarz/`, bei beiden Farben `briefing/`.
+research-deep: `output/players/<slug>/research/matchplan.json`.

@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 
-
-from . import config, engine, games as G, metrics, profile as PR, ratings as R
+from . import config, engine, games as G, metrics, paths as P, profile as PR, ratings as R
 from .dossier import build, write_brief
 from .identify import AmbiguousPlayer, resolve
 from .sources import chessbase, chessresults, lichess, local, nsv
@@ -27,8 +28,11 @@ def prepare(inp: str, fide_id=None, federation=None, birth_year=None, depth=None
         log("   -> erneut mit --fide-id <ID> oder --fed/--birth-year aufrufen.")
         return 2
     pdir = player_dir(ident.slug)
+    P.migrate_player(pdir)
     inbox = pdir / "inbox"
     inbox.mkdir(parents=True, exist_ok=True)
+    rdir = P.stage_dir(pdir, "research")      # Daten von research-deep; identity, inbox, analysis bleiben gemeinsam
+    rdir.mkdir(exist_ok=True)
     log(f"   {ident.display} | FIDE {ident.fide_id} | {ident.federation} | Jg. {ident.birth_year} | "
         f"Elo {ident.elo.get('standard')} | {ident.dsb.get('club', '–')} DWZ {ident.dsb.get('dwz', '–')} "
         f"| Sicherheit: {ident.confidence}")
@@ -39,34 +43,53 @@ def prepare(inp: str, fide_id=None, federation=None, birth_year=None, depth=None
     # ---------- Quellen
     log("-- Quellen")
     srclog, pgn_texts, team_rows = [], [], []
+    tag = log_tag()
 
     def guarded(name, fn):
-        """Eine ausgefallene Quelle (Netz, geaenderte Seite) darf den Lauf nicht abbrechen."""
+        """Eine ausgefallene Quelle (Netz, geaenderte Seite) darf den Lauf nicht abbrechen.
+        Rueckgabe: Ergebnis oder None, Sekunden, Fehlerzeile fuers Quellenprotokoll."""
+        set_log_tag(tag)
+        t = time.monotonic()
         try:
-            return fn()
+            return fn(), round(time.monotonic() - t, 1), None
         except Exception as ex:  # noqa: BLE001 - bewusst breit, Fehler wird protokolliert
             log(f"   ! Quelle {name} fehlgeschlagen: {type(ex).__name__}: {ex}")
-            srclog.append({"source": name, "status": "fehler", "detail": f"{type(ex).__name__}: {ex}"[:200]})
-            return None
+            secs = round(time.monotonic() - t, 1)
+            return None, secs, {"source": name, "status": "fehler", "detail": f"{type(ex).__name__}: {ex}"[:200],
+                                "seconds": secs}
 
-    for name, fn in (("lichess", lambda: lichess.collect(ident)), ("chessbase", lambda: chessbase.collect(ident, inbox)),
-                     ("chess-results", lambda: chessresults.collect(ident, inbox)), ("lokal", lambda: local.collect(ident, inbox))):
-        r = guarded(name, fn)
-        if r:
-            pgn_texts.append(r[0]); srclog += r[1]
+    # alle Quellen und der Elo-Verlauf gleichzeitig (Ratenlimits je Host: util.host_gate); Protokoll in fester Reihenfolge
+    tasks = [("lichess", lambda: lichess.collect(ident)), ("chessbase", lambda: chessbase.collect(ident, inbox)),
+             ("chess-results", lambda: chessresults.collect(ident, inbox)), ("lokal", lambda: local.collect(ident, inbox))]
     if use_nsv:
-        r = guarded("nsv", lambda: nsv.collect(ident, seasons_back=seasons))
-        if r:
-            pgn_texts.append(r[0]); team_rows = r[1]; srclog += r[2]
+        tasks.append(("nsv", lambda: nsv.collect(ident, seasons_back=seasons)))
+    if ident.fide_id:
+        tasks.append(("fide", lambda: R.fide_history(ident.fide_id)))
+    with ThreadPoolExecutor(max_workers=len(tasks)) as ex:
+        done = list(ex.map(lambda t: guarded(*t), tasks))
+    hist = []
+    for (name, _), (r, secs, err) in zip(tasks, done):
+        if err:
+            srclog.append(err)
+        if not r:
+            continue
+        if name == "fide":
+            hist = r
+            continue
+        rows = r[2] if name == "nsv" else r[1]
+        pgn_texts.append(r[0])
+        srclog += [dict(row, seconds=secs) for row in rows]
+        if name == "nsv":
+            team_rows = r[1]
     all_games = []
     for txt in pgn_texts:
         if txt:
             all_games += G.parse_pgn(txt, ident)
     games = G.merge(all_games)
     log(f"   {len(all_games)} Partien eingelesen -> {len(games)} nach Dublettenabgleich")
-    (pdir / "games.pgn").write_text("\n\n".join(G.to_pgn(g) for g in games), encoding="utf-8")
-    write_json(pdir / "team_results.json", team_rows)
-    write_json(pdir / "sources.json", srclog)
+    (rdir / "games.pgn").write_text("\n\n".join(G.to_pgn(g) for g in games), encoding="utf-8")
+    write_json(rdir / "team_results.json", team_rows)
+    write_json(rdir / "sources.json", srclog)
     need_browser = [s for s in srclog if s.get("status") == "browser_noetig"]
     for s in need_browser:
         h = s["hint"]
@@ -76,8 +99,7 @@ def prepare(inp: str, fide_id=None, federation=None, birth_year=None, depth=None
     if not games:
         log("!! Keine Partien mit Zuegen gefunden. Dossier enthaelt nur Identitaet/Mannschaftsdaten.")
 
-    # ---------- Ratings
-    hist = (guarded("fide", lambda: R.fide_history(ident.fide_id)) or []) if ident.fide_id else []
+    # ---------- Ratings (Elo-Verlauf kam mit den Quellen)
     tr = R.trend(hist) if hist else {}
     for g in games:
         if not g["player_elo"] and g["date"]:
@@ -92,7 +114,7 @@ def prepare(inp: str, fide_id=None, federation=None, birth_year=None, depth=None
         def _discover():
             set_log_tag(tag)
             try:
-                disc["res"] = discover(ident, games, pdir)
+                disc["res"] = discover(ident, games, rdir)
             except Exception as ex:  # noqa: BLE001 - wird unten wie ein Fehler der Online-Suche gemeldet
                 disc["err"] = ex
         disc_thread = threading.Thread(target=_discover, daemon=True, name="online-discover")
@@ -112,14 +134,14 @@ def prepare(inp: str, fide_id=None, federation=None, birth_year=None, depth=None
         + ("" if dossier["profile"]["calibrated"] else " – ohne Vergleichskurven (python briefing.py calibrate)"))
     online_viewer = {}
     if use_online:
-        # auch ohne Turnierpartien: Kandidaten ueber Verein, Namen und research.json; nur der Fingerabdruck entfaellt
+        # auch ohne Turnierpartien: Kandidaten ueber Verein, Namen und accounts.json; nur der Fingerabdruck entfaellt
         log("-- Online-Accounts" + ("" if games else " (ohne Turnierpartien: kein Eröffnungs-Fingerabdruck)"))
         from .online.accounts import build_online_section
         disc_thread.join()
         try:
             if "err" in disc:
                 raise disc["err"]
-            onl = build_online_section(ident, games, dossier["trees"], pdir, discovered=disc.get("res"))
+            onl = build_online_section(ident, games, dossier["trees"], rdir, discovered=disc.get("res"))
         except Exception as ex:  # noqa: BLE001
             log(f"   ! Online-Suche fehlgeschlagen: {type(ex).__name__}: {ex}")
             onl = {"active": False, "accounts": {"candidates": [], "accepted": []}, "error": str(ex)[:200]}
@@ -132,20 +154,20 @@ def prepare(inp: str, fide_id=None, federation=None, birth_year=None, depth=None
                 f"{len(onl['facts'])} Belege O…")
         elif acc.get("ambiguous"):
             log(f"   mehrdeutig, nichts übernommen: {', '.join(a['username'] for a in acc['ambiguous'])} "
-                f"(in research.json bestätigen oder ablehnen)")
+                f"(in {P.ACCOUNTS} bestätigen oder ablehnen)")
         else:
             log("   kein Account mit Konfidenz >= 50 %")
         dossier["online"] = onl
     # Viewer-Daten (Zuege + Bewertungen) getrennt, damit dossier.json lesbar bleibt
     viewer = {g["id"]: metrics.viewer_moves(g, ann[g["id"]]) for g in games}
     viewer.update(online_viewer)
-    write_json(pdir / "dossier.json", dossier)
-    write_json(pdir / "viewer.json", viewer)
-    me = PR.load_me(pdir)
-    PR.me_snapshot(pdir, me)
-    write_brief(dossier, pdir / "brief.md", PR.corridor(dossier, me) if me else None)
-    log(f"-- fertig: {pdir / 'dossier.json'}  ({len(dossier['facts'])} Facts)")
-    log(f"   Naechster Schritt: briefing.json schreiben (siehe brief.md), dann `python briefing.py validate {ident.slug}`")
+    write_json(rdir / "dossier.json", dossier)
+    write_json(rdir / "viewer.json", viewer)
+    me = PR.load_me(rdir)
+    PR.me_snapshot(rdir, me)
+    write_brief(dossier, rdir / P.AGENT_BRIEF, PR.corridor(dossier, me) if me else None)
+    log(f"-- fertig: {rdir / 'dossier.json'}  ({len(dossier['facts'])} Facts)")
+    log(f"   Naechster Schritt: {P.MATCHPLAN} schreiben (siehe {P.AGENT_BRIEF}), dann `python briefing.py validate {ident.slug}`")
     return 0
 
 
@@ -158,7 +180,6 @@ def prepare_many(inputs: list[str], **kw) -> int:
     Logzeilen tragen das Kennzeichen [1], [2], ... in der Reihenfolge der Eingaben."""
     if len(inputs) == 1:
         return prepare(inputs[0], **kw)
-    from concurrent.futures import ThreadPoolExecutor
 
     def run(k_inp):
         k, inp = k_inp
@@ -183,34 +204,35 @@ def reprofile(slug: str) -> int:
     Elo-Verlauf aus dem Gegnerordner, keine Quellen, keine Online-Suche."""
     import dataclasses
     from .identify import Identity
-    pdir = player_dir(slug)
-    d = read_json(pdir / "dossier.json")
+    pdir = player_dir(slug.split("/")[0])
+    rdir = P.data_dir(slug)
+    d = read_json(rdir / "dossier.json")
     idt = read_json(pdir / "identity.json")
-    if not d or not idt or not (pdir / "games.pgn").exists():
+    if not d or not idt or not (rdir / "games.pgn").exists():
         log(f"!! {slug}: zuerst prepare ausführen")
         return 1
     names = {f.name for f in dataclasses.fields(Identity)}
     ident = Identity(**{k: v for k, v in idt.items() if k in names})
-    games = G.merge(G.parse_pgn((pdir / "games.pgn").read_text(encoding="utf-8"), ident))
+    games = G.merge(G.parse_pgn((rdir / "games.pgn").read_text(encoding="utf-8"), ident))
     hist = d.get("ratings") or []
     for g in games:
         if not g["player_elo"] and g["date"]:
             g["player_elo_est"] = R.rating_at(hist, g["date"][:7] + "-01")
     pos = engine.analyse_games(games, pdir / "analysis") if games else {}
     ann = {g["id"]: metrics.annotate_game(g, pos[g["id"]]) for g in games}
-    d["profile"] = PR.build(ident, games, ann, pos, read_json(pdir / "team_results.json", []))
-    write_json(pdir / "dossier.json", d)
-    me = PR.load_me(pdir)
-    PR.me_snapshot(pdir, me)
-    write_brief(d, pdir / "brief.md", PR.corridor(d, me) if me else None)
+    d["profile"] = PR.build(ident, games, ann, pos, read_json(rdir / "team_results.json", []))
+    write_json(rdir / "dossier.json", d)
+    me = PR.load_me(rdir)
+    PR.me_snapshot(rdir, me)
+    write_brief(d, rdir / P.AGENT_BRIEF, PR.corridor(d, me) if me else None)
     t = d["profile"]["type"]
-    log(f"   {slug}: {t['name']}{' (unsicher)' if t['unsure'] else ''} – brief.md aktualisiert")
+    log(f"   {slug}: {t['name']}{' (unsicher)' if t['unsure'] else ''} – {P.AGENT_BRIEF} aktualisiert")
     return 0
 
 
 def line(slug: str, san_line: str, scope: str, depth: int = 22) -> int:
-    """Theorie-Linie mit Stockfish pruefen und als zitierbaren Beleg E<n> ablegen."""
-    pdir = player_dir(slug)
+    """Theorie-Linie mit Stockfish pruefen und als zitierbaren Beleg E<n> ablegen (Ordner wie bei validate)."""
+    pdir = P.data_dir(slug)
     checks = read_json(pdir / "engine_checks.json", [])
     r = engine.check_line(san_line, depth=depth)
     r["id"] = f"E{len(checks) + 1}"
@@ -304,20 +326,20 @@ def _remap(b: dict, texts: dict[str, str]) -> dict[str, str]:
 
 
 def validate(slug: str, restamp: bool = False, remap: bool = False) -> int:
-    """Prueft briefing.json. Beim ersten fehlerfreien Lauf wird der Text jedes zitierten Belegs als
+    """Prueft matchplan.json. Beim ersten fehlerfreien Lauf wird der Text jedes zitierten Belegs als
     `_evidence_snapshot` gespeichert; aendert sich ein Beleg spaeter (neue Partien, neue IDs), ist das ein Fehler.
     Nach inhaltlicher Pruefung mit --restamp neu stempeln."""
     from .validate import validate_briefing
-    pdir = player_dir(slug)
+    pdir = P.data_dir(slug)
     d = read_json(pdir / "dossier.json")
-    b = read_json(pdir / "briefing.json")
+    b = read_json(P.file(pdir, P.MATCHPLAN))
     if d:
         d["facts"] = all_facts(pdir)
         PR.me_snapshot(pdir, PR.load_me(pdir))
     if remap and b and d:
         moved = _remap(b, {f["id"]: f["text"] for f in d["facts"]})
         if moved:
-            write_json(pdir / "briefing.json", b)
+            write_json(pdir / P.MATCHPLAN, b)
             log("   umgestellt: " + ", ".join(f"{k}→{v}" for k, v in sorted(moved.items())))
     problems, warnings = validate_briefing(b, d)
     if b and d:
@@ -329,13 +351,13 @@ def validate(slug: str, restamp: bool = False, remap: bool = False) -> int:
                     problems.append(f"Beleg {fid} hat sich seit dem Schreiben geändert: „{old[:90]}“ → „{(texts.get(fid) or 'fehlt')[:90]}“")
         if not problems and (restamp or not snap or set(snap) != _cited(b)):
             b["_evidence_snapshot"] = {fid: texts[fid] for fid in sorted(_cited(b)) if fid in texts}
-            write_json(pdir / "briefing.json", b)
+            write_json(pdir / P.MATCHPLAN, b)
             log(f"   Belege gestempelt ({len(b['_evidence_snapshot'])})")
     for w in warnings:
         log(f"   ~ {w}")
     for p in problems:
         log(f"   ✗ {p}")
-    log("   ✓ Briefing gültig" if not problems else f"   {len(problems)} Problem(e)")
+    log("   ✓ Matchplan gültig" if not problems else f"   {len(problems)} Problem(e)")
     return 1 if problems else 0
 
 
@@ -343,7 +365,7 @@ def render(slugs: list[str], with_me: bool = True) -> int:
     from .render.html import render_player
     outs = []
     for s in slugs:
-        pdir = player_dir(s)
+        pdir = P.data_dir(s)
         out = render_player(pdir, with_me=with_me)
         log(f"   -> {out}")
         outs.append(out)

@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import math
 import statistics as st
+from pathlib import Path
 
 import chess
 
@@ -560,9 +561,11 @@ def _facts(p: dict) -> list[dict]:
 
 # ---------------------------------------------------------------- Eigenprofil
 def load_me(pdir) -> dict | None:
-    """me.json (Projektwurzel, Voreinstellung) ueberlagert von output/players/<slug>/me.json (nur dieses Briefing)."""
+    """me.json (Projektwurzel, Voreinstellung) ueberlagert von output/players/<slug>/me.json (nur dieser Gegner);
+    pdir darf der Spielerordner oder ein Stufenordner darin sein."""
+    from .paths import player_root
     base = read_json(config.ROOT / "me.json") or {}
-    over = read_json(pdir / "me.json") or {}
+    over = read_json(player_root(Path(pdir)) / "me.json") or {}
     me = {**base, **over}
     for k in ("repertoire",):
         if isinstance(base.get(k), dict) and isinstance(over.get(k), dict):

@@ -1,8 +1,8 @@
 """Skill chess-opponent-team-prep: eine ganze Mannschaft mit einer der drei Stufen vorbereiten.
 
 Aufstellung (Ligaserver-Seite, team.json oder Liste) -> Auswahl der Bretter -> Farbe je Brett -> je Spieler die Stufe
-scout (scout-fast), medium (briefing-medium) oder research (research-deep) -> Mannschaftsseite mit Umschalter oben.
-Daten: output/teams/<mannschaft>/team_<stufe>.json ; Seite: output/teams/<mannschaft>/team_<mannschaft>_<stufe>.html
+scout (scout-fast), briefing (briefing-medium; alter Name medium) oder research (research-deep) -> Mannschaftsseite.
+Daten: output/teams/<mannschaft>/team_<mannschaft>_<stufe>.json ; Seite: .../team_<mannschaft>_<stufe>.html
 (die Einzelreports bleiben in output/players/<slug>/)
 """
 from __future__ import annotations
@@ -10,18 +10,16 @@ from __future__ import annotations
 import datetime as dt
 import time
 
-from .. import config, lineup as L
+from .. import config, lineup as L, paths as P
 from ..util import log, read_json
-from .common import FOLDER, timed, write_json_atomic
+from .common import timed, write_json_atomic
 
-STAGES = ("scout", "medium", "research")
+STAGES = P.STAGES
 
 
 def report_path(slug: str, stage: str, color: str):
     """Report einer Stufe im Gegnerordner (dieselben Dateien wie bei den Einzel-Skills)."""
-    pdir = config.PLAYERS_DIR / slug
-    return {"scout": pdir / f"scout_{slug}.html", "medium": pdir / f"briefing_{slug}_{FOLDER[color]}.html",
-            "research": pdir / f"briefing_{slug}.html"}[stage]
+    return P.report_path(P.player_dir(slug), stage, color)
 
 
 def team_dir(team: str):
@@ -31,6 +29,7 @@ def team_dir(team: str):
 def run(sources: list[str], stage: str, color: str | None = None, board1: str | None = None, boards: str | None = None,
         team: str = "", budget: float | None = None, n_games: int = 20) -> int:
     t0 = time.monotonic()
+    stage = P.stage(stage)
     lu = L.load(sources, team)
     players = L.select(lu, boards)
     L.assign_colors(players, color, board1)
@@ -74,7 +73,7 @@ def run(sources: list[str], stage: str, color: str | None = None, board1: str | 
     total = round(time.monotonic() - t0, 1)
     doc = {"team": lu["team"], "source": lu["source"], "stage": stage, "boards": boards, "generated":
            dt.datetime.now().isoformat(timespec="minutes"), "seconds": total, "players": players}
-    write_json_atomic(tdir / f"team_{stage}.json", doc)
+    write_json_atomic(data_path(tdir, lu["team"], stage), doc)
     out = render(tdir, stage)
     ok = sum(p["status"] == "ok" for p in players)
     log(f"-- Mannschaft fertig: {ok} von {len(players)} Spielern mit Report, {total:.0f} s")
@@ -82,12 +81,19 @@ def run(sources: list[str], stage: str, color: str | None = None, board1: str | 
         log(f"   {p.get('nr'):>4} {p.get('display') or p['name']:<28} {p['color']:<5} {p['status']:<4} "
             f"{p.get('seconds', 0):>6.1f} s  {p.get('note', '')}")
     log(f"   Seite: {out}")
-    if stage in ("medium", "research"):
+    if stage in ("briefing", "research"):
         log("   Nächster Schritt: je Spieler den Matchplan schreiben (siehe Skill der Stufe), dann "
             f"`python briefing.py team-render {tdir.name} --stage {stage}`")
     return 0 if ok else 1
 
 
+def data_path(tdir, team: str, stage: str):
+    return tdir / f"team_{L.team_slug(team)}_{P.stage(stage)}.json"
+
+
 def render(tdir, stage: str):
+    """Mannschaftsseite neu bauen (nach neuen Matchplaenen); alte Dateinamen werden vorher umgestellt."""
     from ..render.team import render_team
-    return render_team(tdir, read_json(tdir / f"team_{stage}.json"))
+    stage = P.stage(stage)
+    P.migrate_team(tdir)
+    return render_team(tdir, read_json(tdir / f"team_{tdir.name}_{stage}.json"))

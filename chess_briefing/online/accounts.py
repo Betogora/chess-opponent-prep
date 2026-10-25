@@ -1,12 +1,12 @@
 """Account-Erkennung + Online-Repertoire.
 
-Ablauf (deterministisch, Research-Eingaben nur ueber output/players/<slug>/research.json):
+Ablauf (deterministisch, Research-Eingaben nur ueber output/players/<slug>/research/accounts.json):
   1. Kandidaten: Lichess-Vereinsteam (Turnierteilnehmer), Chess.com-Vereinsclub (Mitglieder),
-     Namensvarianten auf beiden Plattformen, extra_candidates aus research.json.
+     Namensvarianten auf beiden Plattformen, extra_candidates aus accounts.json.
   2. Partien je Kandidat: Lichess-Vereinsturniere (+ Komplettexport mit LICHESS_TOKEN fuer die Top-Kandidaten),
      Chess.com-Archive (24 Monate).
   3. Fingerabdruck (fingerprint.py) + Profilmerkmale -> Konfidenz per Log-Odds-Formel (WEIGHTS).
-  4. research.json: "accounts": {"lichess:Name": {"status": "bestaetigt"|"abgelehnt", "note": "..."}} uebersteuert.
+  4. accounts.json: "accounts": {"lichess:Name": {"status": "bestaetigt"|"abgelehnt", "note": "..."}} uebersteuert.
      "username_patterns": {"lichess": ["?b?u???"]} = verdeckter Account-Hinweis (z. B. aus SnoopChess abgeschrieben,
      ? = ein Zeichen, * = beliebig viele): liefert Kandidaten ueber Lichess-Autocomplete und ist ein schwaches Merkmal.
   5. Accounts mit Konfidenz >= ACCEPT werden uebernommen: Online-Baum, Abgleich mit Turnier-Baum, Belege O1...
@@ -23,7 +23,7 @@ from collections import Counter
 import chess
 import chess.engine
 
-from .. import config
+from .. import config, paths as P
 from ..openings import build_tree, main_lines
 from ..util import name_matches, read_json, strip_accents, write_json
 from .. import metrics
@@ -47,7 +47,7 @@ WEIGHTS = {
     "rating_bad": -0.7,     # unplausibel (|z| > 2; nach oben 1,3-fach toleranter)
     "crosslink": 1.0,       # anderer Plattform-Account verweist darauf
     "same_name_elsewhere": 0.2,
-    "pattern": 0.7,         # passt zum verdeckten Account-Hinweis (research.json username_patterns); allein nie ausreichend
+    "pattern": 0.7,         # passt zum verdeckten Account-Hinweis (accounts.json username_patterns); allein nie ausreichend
     "pattern_miss": -1.0,   # Hinweis fuer die Plattform vorhanden, Benutzername passt nicht (Hinweis selbst ist eine Vermutung)
 }
 MIN_EVENTS = 8
@@ -66,7 +66,7 @@ def _sig(x):
 def select_accounts(ranked: list[dict]) -> tuple[list[dict], list[dict]]:
     """Hoechstens ein Account je Plattform. Liegen mehrere ueber ACCEPT, wird der beste nur uebernommen, wenn er
     mindestens MARGIN Log-Odds vor dem zweiten liegt; sonst keiner (mehrdeutig, typisch fuer grosse Vereine mit
-    gaengigem Repertoire). Ein in research.json bestaetigter Account gilt immer."""
+    gaengigem Repertoire). Ein in accounts.json bestaetigter Account gilt immer."""
     accepted, ambiguous = [], []
     for plat in sorted({c["platform"] for c in ranked}):
         over = [c for c in ranked if c["platform"] == plat and c["confidence"] >= ACCEPT]
@@ -150,7 +150,7 @@ def _parallel(fn, items: list, deadline: float, workers: int = 6) -> set:
 
 
 def discover(ident, otb_games: list[dict], pdir) -> dict:
-    research = read_json(pdir / "research.json", {}) or {}
+    research = read_json(P.file(pdir, P.ACCOUNTS), {}) or {}
     deadline = time.time() + config.ONLINE_BUDGET_S       # nur fuer die breiten Schritte (Verein), siehe config
     skipped = []
     club = (ident.dsb or {}).get("club", "")
@@ -220,9 +220,9 @@ def discover(ident, otb_games: list[dict], pdir) -> dict:
             add("chesscom", p["username"], "Namensvariante")
     for plat, names in (research.get("extra_candidates") or {}).items():
         for n in names:
-            add(plat, n, "research.json")
+            add(plat, n, "accounts.json")
 
-    # ---- Verdeckte Account-Hinweise (research.json "username_patterns", z. B. aus SnoopChess): Kandidaten ueber das
+    # ---- Verdeckte Account-Hinweise (accounts.json "username_patterns", z. B. aus SnoopChess): Kandidaten ueber das
     # Lichess-Autocomplete mit Namenspraefixen, die zum Muster passen. Chess.com hat keine Namenssuche: dort wirkt das
     # Muster nur als Merkmal (ein Muster ohne ? und * ist ein vollstaendiger Name und wird direkt Kandidat).
     patterns = {plat: [str(x).strip() for x in (v if isinstance(v, list) else [v]) if x and str(x).strip()]
@@ -322,16 +322,16 @@ def discover(ident, otb_games: list[dict], pdir) -> dict:
             f["rating_bad"] = 1
 
     # ---- Vorauswahl: teure Schritte (Chess.com-Partien, Fingerabdruck) nur fuer die besten MAX_SHORTLIST nach
-    # Profilmerkmalen; Namensvarianten und research.json immer. Gleichstand: mehr Fund-Partien, dann Name.
+    # Profilmerkmalen; Namensvarianten und accounts.json immer. Gleichstand: mehr Fund-Partien, dann Name.
     always = {k for k, c in cand.items()
-              if {"Namensvariante", "research.json"} & set(c["via"]) or c["features"].get("pattern")}
+              if {"Namensvariante", "accounts.json"} & set(c["via"]) or c["features"].get("pattern")}
     ranked_pre = sorted(cand, key=lambda k: (-_logit(cand[k]["features"]), -len(games_by.get(k, [])), k.lower()))
     shortlist = set(ranked_pre[:MAX_SHORTLIST]) | always
     if len(cand) > len(shortlist):
         P.note(f"{len(cand)} Kandidaten, Fingerabdruck für die {len(shortlist)} besten nach Profilmerkmalen")
 
     # ---- Partien fuer Chess.com-Kandidaten und Muster-Kandidaten ohne Vereinsturniere (Fingerabdruck)
-    # Reihenfolge: Namens-/Muster-/research.json-Kandidaten zuerst (immer), danach nach Profilmerkmalen bis zur Frist
+    # Reihenfolge: Namens-/Muster-/accounts.json-Kandidaten zuerst (immer), danach nach Profilmerkmalen bis zur Frist
     cc_keys = [k for k in ranked_pre if cand[k]["platform"] == "chesscom" and k in shortlist]
     cc_keys = [k for k in cc_keys if k in always] + [k for k in cc_keys if k not in always]
     for n, k in enumerate(cc_keys):
@@ -377,7 +377,7 @@ def discover(ident, otb_games: list[dict], pdir) -> dict:
         if k in cand:
             cand[k]["features"]["crosslink"] = 1
 
-    # ---- Konfidenz + research.json
+    # ---- Konfidenz + accounts.json
     overrides = research.get("accounts", {})
     for k, c in cand.items():
         lo = _logit(c["features"])
@@ -498,7 +498,7 @@ def _reasons(c) -> list[str]:
                  f"{', '.join(f'{k} {v}' for k, v in pr.get('ratings', {}).items() if k in rc['per_speed'])} "
                  f"→ erwartet Elo ≈ {rc['expected_elo']}, Turnier {ref}, z {rc['z']:+.1f}")
     if f.get("pattern"):
-        r.append(f"passt zum verdeckten Account-Hinweis {c.get('pattern')} (research.json; selbst nur eine Vermutung)")
+        r.append(f"passt zum verdeckten Account-Hinweis {c.get('pattern')} (accounts.json; selbst nur eine Vermutung)")
     if f.get("pattern_miss"):
         r.append(f"passt nicht zum verdeckten Account-Hinweis {c.get('pattern')}")
     if f.get("name_conflict"):

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from .. import paths as P
 from ..util import read_json
 from .html import (COL, e, ev_buttons, form_section, games_section, keys_section, openings_section, page, payload_for,
                    pct, section, stat, wdl_bar)
@@ -50,6 +51,5 @@ def render_scout(pdir: Path, d: dict) -> Path:
         ("ergebnisse", "Ergebnisse", results_section(d, order)),
         ("form", "Form", form_section(d)),
     ]
-    slug = d["identity"]["slug"]
     return page(d, b, sections, payload_for(pdir, d, viewer, with_me=False), f"Steckbrief {d['identity']['display']}",
-                pdir.parent / f"scout_{slug}.html", "chess-opponent-scout-fast")
+                P.report_path(P.player_root(pdir), "scout"), "chess-opponent-scout-fast")
